@@ -1,4 +1,7 @@
 .DS_Store
 *.o
+liz.c
+piz.c
+piz.h
 piz.output
 wiz
