@@ -4,5 +4,5 @@
 #include "std.h"
 #include "ast.h"
 
-void pretty_prog(FILE *fp, Program prog);
+void pretty_prog(FILE *fp, Program *prog);
 

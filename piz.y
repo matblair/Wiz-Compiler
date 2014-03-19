@@ -14,7 +14,7 @@
 #include "std.h"
 #include "missing.h"
 
-extern Program parsed_program;
+extern Program *parsed_program;
 extern void    report_error_and_exit(const char *msg);
 extern char    *yytext;
 
@@ -27,12 +27,12 @@ void *allocate(int size);
 %union {
     int     int_val;
     char    *str_val;
-    Decl    decl_val;
-    Decls   decls_val;
-    Expr    expr_val;
-    Stmts   stmts_val;
-    Stmt    stmt_val;
-    Program prog_val;
+    Decl    *decl_val;
+    Decls   *decls_val;
+    Expr    *expr_val;
+    Stmts   *stmts_val;
+    Stmt    *stmt_val;
+    Program *prog_val;
 }
 
 %token '(' ')' ';'

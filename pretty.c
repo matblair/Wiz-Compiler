@@ -11,7 +11,7 @@
 extern void report_error_and_exit(const char *msg);
 
 void
-pretty_prog(FILE *fp, Program prog) {
+pretty_prog(FILE *fp, Program *prog) {
 
     report_error_and_exit("Pretty-print has not been implemented yet");
 }

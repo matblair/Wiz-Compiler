@@ -10,12 +10,12 @@
 
 #include "std.h"
 
-typedef struct decl   *Decl;
-typedef struct decls  *Decls;
-typedef struct expr   *Expr;
-typedef struct stmts  *Stmts;
-typedef struct stmt   *Stmt;
-typedef struct prog   *Program;
+typedef struct decl   Decl;
+typedef struct decls  Decls;
+typedef struct expr   Expr;
+typedef struct stmts  Stmts;
+typedef struct stmt   Stmt;
+typedef struct prog   Program;
 
 typedef enum {
     BINOP_ADD, BINOP_SUB, BINOP_MUL
@@ -58,8 +58,8 @@ struct expr {
     Constant  constant;     /* for constant values */
     UnOp      unop;         /* for unary operators */
     BinOp     binop;        /* for binary operators */
-    Expr      e1;           /* for unary and binary operators */
-    Expr      e2;           /* for binary operators */
+    Expr      *e1;          /* for unary and binary operators */
+    Expr      *e2;          /* for binary operators */
 };
 
 struct decl {
@@ -69,8 +69,8 @@ struct decl {
 };
 
 struct decls {
-    Decl      first;
-    Decls     rest;
+    Decl      *first;
+    Decls     *rest;
 };
 
 typedef enum {
@@ -79,26 +79,26 @@ typedef enum {
 
 typedef struct {
     char      *asg_id;
-    Expr      asg_expr;
+    Expr      *asg_expr;
 } Assign;
 
 typedef struct {
-    Expr      cond;
-    Stmts     then_branch;
-    Stmts     else_branch;
+    Expr      *cond;
+    Stmts     *then_branch;
+    Stmts     *else_branch;
 } Cond;
 
 typedef struct {
-    Expr      cond;
-    Stmts     body;
+    Expr      *cond;
+    Stmts     *body;
 } While;
 
 typedef union {
     Assign    assign;
-    Stmts     stmts;
+    Stmts     *stmts;
     Cond      cond;
     char      *read;
-    Expr      write;
+    Expr      *write;
     While     loop;
 } SInfo;
 
@@ -109,13 +109,13 @@ struct stmt {
 };
 
 struct stmts {
-    Stmt      first;
-    Stmts     rest;
+    Stmt      *first;
+    Stmts     *rest;
 };
 
 struct prog {
-    Decls     decls;
-    Stmts     body;
+    Decls     *decls;
+    Stmts     *body;
 };
 
 #endif /* AST_H */

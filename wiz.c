@@ -14,7 +14,7 @@
 
 const char  *progname;
 const char  *iz_infile;
-Program     parsed_program = NULL;
+Program     *parsed_program = NULL;
 
 extern FILE *yyin;
 
