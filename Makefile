@@ -51,5 +51,3 @@ print:
 
 $(AUTO) $(BUILD) $(BIN):
 	mkdir -p $@
-
-minor edit
