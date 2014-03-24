@@ -12,20 +12,10 @@ CSRC = $(notdir  $(filter $(SRCD)%, $(SRC)))
 
 OBJ = $(addsuffix .o, $(notdir $(basename $(SRC))))	
 
-
 CC = gcc -Wall
 
-print:
-	@echo build		: $(OBJ)
-	@echo sources 	: $(SRC)
-	@echo other lang files	: $(ASRC)
-	@echo c sources : $(CSRC)
 
-$(AUTO) $(BUILD) $(BIN):
-	echo $@
-	mkdir -p $@
-
-all: piz liz wiz
+#all: piz liz wiz
 
 wiz: $(OBJ) | $(BIN)
 	$(CC) -o $(BIN)$@ $(addprefix $(BUILD), $(OBJ))
@@ -53,4 +43,11 @@ $(OBJ): %.o  :  %.c | $(BUILD)
 	gcc  -c $(filter  %$(basename $(@F)).c, $(SRC))  -I$(AUTO) -I$(SRCD) -o $(BUILD)$@
 
 
+print:
+	@echo build		: $(OBJ)
+	@echo sources 	: $(SRC)
+	@echo other lang files	: $(ASRC)
+	@echo c sources : $(CSRC)
 
+$(AUTO) $(BUILD) $(BIN):
+	mkdir -p $@
