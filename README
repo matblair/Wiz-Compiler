@@ -50,5 +50,3 @@ could be because your PATH variable hasn't been set correctly.
 For now, just try instead
 
     ./wiz -p test.iz
-
-edit
