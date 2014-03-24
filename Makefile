@@ -1,19 +1,56 @@
-HDR =	wiz.h piz.h ast.h pretty.h std.h missing.h
+BIN=./bin/
+BUILD=./build/
+AUTO=./auto/
+SRCD=./src/
 
-OBJ =	wiz.o piz.o liz.o ast.o pretty.o 
 
-CC = 	gcc -Wall
+ASRC = $(wildcard $(SRCD)*.l) $(wildcard $(SRCD)*.y)
 
-wiz: $(OBJ)
-	$(CC) -o wiz $(OBJ)
+SRC = $(wildcard $(SRCD)*.c) $(addsuffix .c , $(addprefix $(AUTO), $(basename $(notdir $(ASRC))))) 
 
-piz.c piz.h: piz.y ast.h std.h missing.h
-	bison --debug -v -d piz.y -o piz.c
+CSRC = $(notdir  $(filter $(SRCD)%, $(SRC)))
 
-liz.c: liz.l piz.h std.h ast.h
-	flex -s -oliz.c liz.l
+OBJ = $(addsuffix .o, $(notdir $(basename $(SRC))))	
+
+
+CC = gcc -Wall
+
+print:
+	@echo build		: $(OBJ)
+	@echo sources 	: $(SRC)
+	@echo other lang files	: $(ASRC)
+	@echo c sources : $(CSRC)
+
+$(AUTO) $(BUILD) $(BIN):
+	echo $@
+	mkdir -p $@
+
+all: piz liz wiz
+
+wiz: $(OBJ) | $(BIN)
+	$(CC) -o $(BIN)$@ $(addprefix $(BUILD), $(OBJ))
+
+
+piz: piz.o $(OBJ) | $(BIN)
+	$(CC) -o $(BIN)$@ $(addprefix $(BUILD), $^)
+
+
+liz: piz.o liz.o $(OBJ)  | $(BIN)
+	 $(CC) -o $(BIN)$@ $(addprefix $(BUILD), $^)
+
+piz.c piz.h:  | $(AUTO)
+	bison --debug -v -d $(SRCD)piz.y -o $(AUTO)piz.c
+
+liz.c liz.h: piz.h  | $(AUTO)
+	flex -s -o$(AUTO)liz.c $(SRCD)liz.l
+
+$(CSRC) :
 
 clean:
-	/bin/rm $(OBJ) piz.c piz.h piz.output liz.c
+	/bin/rm -rf $(BUILD) $(AUTO) $(BIN)
 
-$(OBJ):	$(HDR)
+$(OBJ): %.o  :  %.c | $(BUILD)
+	gcc  -c $(filter  %$(basename $(@F)).c, $(SRC))  -I$(AUTO) -I$(SRCD) -o $(BUILD)$@
+
+
+
