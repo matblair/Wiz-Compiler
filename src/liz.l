@@ -6,6 +6,7 @@
 -----------------------------------------------------------------------*/
 
 NUM     -?[0-9]+
+DEC 	-?[0-9]+\`.[0-9]+
 ID      [a-zA-Z_][A-Za-z_0-9]*
 nl      [\n\f]
 nonl    [^\n\f]
@@ -29,29 +30,49 @@ extern int ln;
 
 %%
 
-do              { return DO_TOKEN; }
-else            { return ELSE_TOKEN; }
+and 			{ return AND_TOKEN;   }
+bool 			{ return BOOL_TOKEN;  }
+do              { return DO_TOKEN;    }
+else            { return ELSE_TOKEN;  }
+end 			{ return END_TOKEN;   }
 false           { return FALSE_TOKEN; }
-fi              { return FI_TOKEN; }
-if              { return IF_TOKEN; }
-int             { return INT_TOKEN; }
-bool            { return BOOL_TOKEN; }
-od              { return OD_TOKEN; }
-read            { return READ_TOKEN; }
-then            { return THEN_TOKEN; }
-true            { return TRUE_TOKEN; }
+fi              { return FI_TOKEN;    }
+if              { return IF_TOKEN;    }
+int             { return INT_TOKEN;   }
+float			{ return FLOAT_TOKEN; }
+not 			{ return NOT_TOKEN;   }
+od              { return OD_TOKEN;    }
+or 				{ return OR_TOKEN;    }
+proc            { return PROC_TOKEN;  }
+read            { return READ_TOKEN;  }
+ref				{ return REF_TOKEN;   }
+then            { return THEN_TOKEN;  }
+true            { return TRUE_TOKEN;  }
+val 			{ return VAL_TOKEN;   }
 while           { return WHILE_TOKEN; }
 write           { return WRITE_TOKEN; }
 
-{NUM}           { yylval.int_val = atoi(yytext); return NUMBER_TOKEN; }
+{NUM}           { yylval.int_val = atoi(yytext); 
+	              return NUMBER_TOKEN; }
+{DEC}			{ yylval.int_val = atof(yytext); 
+	              return FLOAT_TOKEN; }
+{ID}            { yylval.str_val = (char *) strdup(yytext); 
+				  return IDENT_TOKEN; }
 
-{ID}            { yylval.str_val = (char *) strdup(yytext); return IDENT_TOKEN; }
 
-[-+*;()]        { return yytext[0]; }         /* single character tokens */
 
-":="            { return ASSIGN_TOKEN; }
+[-+*,;()]        { return yytext[0]; }         /* single character tokens */
 
-"#"{nonl}*{nl}  { ln++; }
+":="            { return ASSIGN_TOKEN; } /* An assignment */
+
+"<"				{ return LT_TOKEN;   } /* Less than  */
+"<="			{ return LTEQ_TOKEN; } /* Less than or equal to  */
+">"				{ return GT_TOKEN;   } /* Greater than  */
+">="			{ return GTEQ_TOKEN; } /* Greater than or equal to */
+"="				{ return EQ_TOKEN;   } /* Equal to */
+"!="			{ return NOTEQ_TOKEN;} /* Not equal to */
+
+"#"{nonl}*{nl}  { ln++; } /* Any comments */
 
 {nl}            { ln++; }
 

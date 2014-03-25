@@ -10,36 +10,60 @@
 
 #include "std.h"
 
-typedef struct decl   Decl;
-typedef struct decls  Decls;
-typedef struct expr   Expr;
-typedef struct stmts  Stmts;
-typedef struct stmt   Stmt;
-typedef struct prog   Program;
+typedef struct decl         Decl;
+typedef struct decls        Decls;
+typedef struct expr         Expr;
+typedef struct stmts        Stmts;
+typedef struct stmt         Stmt;
+typedef struct param        Param;
+typedef struct params       Params;
+typedef struct header       Header;
+typedef struct body         Body;
+typedef struct proc         Proc;
+typedef struct procs        Procs;
+typedef struct prog         Program;
+typedef struct func         Function;
+typedef struct args         Args;
 
 typedef enum {
-    BINOP_ADD, BINOP_SUB, BINOP_MUL
+    BINOP_ADD, BINOP_SUB, BINOP_MUL, BINOP_DIV, BINOP_OR, BINOP_AND,
+    BINOP_EQ, BINOP_NTEQ, BINOP_LT, BINOP_LTEQ, BINOP_GTEQ, BINOP_GT
 } BinOp;
 
-#define BINOP_NAMES "+", "-", "*"
+
+#define BINOP_NAMES "+","-","*","/","or","and","=","!=","<","<=",">",">="
 
 extern const char *binopname[]; 
 
 typedef enum {
-    UNOP_MINUS
+    VAL_IND, REF_IND
+} ParamsInd;
+
+#define VAL_NAMES "val", "ref"
+
+extern const char *valnames[];
+
+
+typedef enum {
+    UNOP_MINUS, UNOP_NOT
 } UnOp;
 
-#define UNOP_NAMES "-"
+#define UNOP_NAMES "-", "not"
 
 extern const char *unopname[];
 
 typedef enum {
-    BOOL_TYPE, INT_TYPE
+    BOOL_TYPE, INT_TYPE, FLOAT_TYPE
 } Type;
+
+#define TYPE_NAMES "bool", "int", "float"
+
+extern const char *typenames[];
 
 typedef union {
     int    int_val;
     BOOL   bool_val;
+    float  float_val;
 } Value;
 
 typedef struct {
@@ -48,7 +72,7 @@ typedef struct {
 } Constant;
 
 typedef enum {
-    EXPR_ID, EXPR_CONST, EXPR_BINOP, EXPR_UNOP
+    EXPR_ID, EXPR_CONST, EXPR_BINOP, EXPR_UNOP, EXPR_LIST
 } ExprKind;
 
 struct expr {
@@ -74,7 +98,7 @@ struct decls {
 };
 
 typedef enum {
-    STMT_ASSIGN, STMT_COND, STMT_READ, STMT_WHILE, STMT_WRITE
+    STMT_ASSIGN, STMT_COND, STMT_READ, STMT_WHILE, STMT_WRITE, STMT_FUNC
 } StmtKind;
 
 typedef struct {
@@ -99,6 +123,7 @@ typedef union {
     Cond      cond;
     char      *read;
     Expr      *write;
+    Function  *func;
     While     loop;
 } SInfo;
 
@@ -113,9 +138,52 @@ struct stmts {
     Stmts     *rest;
 };
 
-struct prog {
-    Decls     *decls;
-    Stmts     *body;
+struct func {
+    char *id;
+    Args *args;
 };
+
+struct args {
+   Expr    *first;
+   Args    *rest;
+};
+
+struct param {
+    ParamsInd ind;
+    Type      type;
+    char     *id;
+};
+
+struct params {
+   Param     *first;
+   Params    *rest;
+};
+
+struct header {
+   char      *id;
+   Params    *params;
+};
+
+struct body {
+    Decls      *decls;
+    Stmts      *statements;
+};
+
+struct proc {
+    Header     *header;
+    Body       *body;
+};
+
+struct procs {
+    Proc      *first;
+    Procs     *rest;
+};
+
+struct prog {
+    Procs   *procedures;
+    // Possibly something else here?
+};
+
+
 
 #endif /* AST_H */

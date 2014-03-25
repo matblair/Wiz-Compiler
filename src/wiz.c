@@ -63,7 +63,6 @@ main(int argc, char **argv) {
         pretty_prog(fp, parsed_program);
     else
         report_error_and_exit("Unable to generate code");
-
     return 0;
 }
 
@@ -71,13 +70,11 @@ main(int argc, char **argv) {
 
 static void
 usage(void) {
-
     printf("usage: wiz [-p] iz_source_file\n");
 }
 
 void
 report_error_and_exit(const char *msg) {
-
     fprintf(stderr, "Error: %s\n", msg);
     exit(EXIT_FAILURE);
 }
