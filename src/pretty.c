@@ -27,8 +27,7 @@ void print_statements(FILE *, Stmts *, int level);
 void print(FILE *fp, Procs *rec, int level);
 
 
-void
-pretty_prog(FILE *fp, Program *prog) {
+void pretty_prog(FILE *fp, Program *prog) {
 
     print_program(fp, prog);
     //report_error_and_exit("Pretty-print has not been implemented yet");

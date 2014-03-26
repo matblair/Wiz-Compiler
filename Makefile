@@ -1,16 +1,29 @@
 BIN=./bin/
-BUILD=./build/
+BUILD=./obj/
 AUTO=./auto/
 SRCD=./src/
+TESTD=./tests/
+LIBD=./lib/
 
 
 ASRC = $(wildcard $(SRCD)*.l) $(wildcard $(SRCD)*.y)
 
-SRC = $(wildcard $(SRCD)*.c) $(addsuffix .c , $(addprefix $(AUTO), $(basename $(notdir $(ASRC))))) 
+SRC = $(wildcard $(SRCD)*.c) $(addsuffix .c , $(addprefix $(AUTO), $(basename $(notdir $(ASRC)))))  
 
 CSRC = $(notdir  $(filter $(SRCD)%, $(SRC)))
 
 OBJ = $(addsuffix .o, $(notdir $(basename $(SRC))))	
+
+
+TESTSRC = $(wildcard $(TESTD)*.c) $(wildcard $(LIBD)seatest/*.c)
+
+TESTS =  $(notdir $(TESTSRC))
+
+TESTOBJ = $(addsuffix .o,$(basename $(TESTS))) 
+
+LIBPATHS = $(addprefix -I, $(wildcard $(LIBD)*))
+
+
 
 CC = gcc -Wall
 
@@ -19,6 +32,10 @@ CC = gcc -Wall
 
 wiz: $(OBJ) | $(BIN)
 	$(CC) -o $(BIN)$@ $(addprefix $(BUILD), $(OBJ))
+
+run_tests: $(TESTOBJ) | $(BIN)
+	$(CC) -o $(BIN)$@ $(addprefix $(BUILD), $^)
+	$(BIN)$@
 
 
 piz: piz.o $(OBJ) | $(BIN)
@@ -34,13 +51,13 @@ piz.c piz.h:  | $(AUTO)
 liz.c liz.h: piz.h  | $(AUTO)
 	flex -s -o$(AUTO)liz.c $(SRCD)liz.l
 
-$(CSRC) :
+$(CSRC) $(TESTS):
 
 clean:
 	/bin/rm -rf $(BUILD) $(AUTO) $(BIN)
 
-$(OBJ): %.o  :  %.c | $(BUILD)
-	gcc  -c $(filter  %$(basename $(@F)).c, $(SRC))  -I$(AUTO) -I$(SRCD) -o $(BUILD)$@
+$(OBJ) $(TESTOBJ): %.o  :  %.c | $(BUILD)
+	gcc  -c $(filter  %$(basename $(@F)).c, $(SRC) $(TESTSRC)) $(LIBPATHS)  -I$(AUTO) -I$(SRCD) -o $(BUILD)$@
 
 
 print:
@@ -48,6 +65,9 @@ print:
 	@echo sources 	: $(SRC)
 	@echo other lang files	: $(ASRC)
 	@echo c sources : $(CSRC)
+	@echo Test sources : $(TESTSRC)
+	@echo Test Obj: $(TESTOBJ)
+	@echo LibPaths : $(LIBPATHS) 
 
 $(AUTO) $(BUILD) $(BIN):
 	mkdir -p $@
