@@ -1,5 +1,23 @@
 #include "seatest.h"
+#include "wizparser.h"
 
+int map_to_zero_or_one(int i){
+    if (i != 0) return 1;
+    return i;
+}
+void test_is_valid_input(){
+    int isValid = 0;
+    isValid = wizparse_str("proc main() a:=5; end");
+    assert_int_equal(0, isValid);
+}
+
+void test_stmt_missing_semicolon_invalid(){
+    int is_valid;
+    is_valid = map_to_zero_or_one( wizparse_str("proc main() a:=5 end"));
+    assert_int_equal(1, is_valid);
+    
+}
+/* 
 void test_strings_equal()
 {
 	char *s = "hello";
@@ -36,12 +54,12 @@ void test_strings()
 	assert_string_starts_with("why", "why say blah?");
 }
 
+*/
 
 void test_fixture_one( void )
 {
 	test_fixture_start();               // starts a fixture
-	run_test(test_strings);   // run tests
-	run_test(test_arrays_equal);
-	run_test(test_bits);
+	run_test(test_is_valid_input);
+	run_test(test_stmt_missing_semicolon_invalid);
 	test_fixture_end();                 // ends a fixture
 }
