@@ -4,4 +4,11 @@ liz.c
 piz.c
 piz.h
 piz.output
+*.swp
+*.swo
 wiz
+/data
+/bin
+/auto
+/build
+/obj

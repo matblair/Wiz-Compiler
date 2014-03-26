@@ -24,12 +24,13 @@ int yylex(void);
 int yywrap(void);
 
 extern int ln;
+extern void * allocate(int);
 
 %}
 
 %%
 
-do              { return DO_TOKEN; }
+do              { yylval.str_val = yytext; return DO_TOKEN; }
 else            { return ELSE_TOKEN; }
 false           { return FALSE_TOKEN; }
 fi              { return FI_TOKEN; }
@@ -42,12 +43,19 @@ then            { return THEN_TOKEN; }
 true            { return TRUE_TOKEN; }
 while           { return WHILE_TOKEN; }
 write           { return WRITE_TOKEN; }
+proc            { yylval.str_val = (char *) strdup(yytext);  return PROC_TOKEN; }
+end             { yylval.str_val = (char *) strdup(yytext); return END_TOKEN; }
 
-{NUM}           { yylval.int_val = atoi(yytext); return NUMBER_TOKEN; }
+{NUM}           { yylval.const_val =  allocate(sizeof ( Constant)) ;
+                  yylval.const_val->val.int_val = atoi(yytext); 
+                  yylval.const_val->raw = (char *) strdup(yytext); 
+                  return NUMBER_TOKEN; 
+                  
+                }
 
 {ID}            { yylval.str_val = (char *) strdup(yytext); return IDENT_TOKEN; }
 
-[-+*;()]        { return yytext[0]; }         /* single character tokens */
+[-+*;(),]        { return yytext[0]; }         /* single character tokens */
 
 ":="            { return ASSIGN_TOKEN; }
 

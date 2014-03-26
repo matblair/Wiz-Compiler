@@ -16,6 +16,12 @@ typedef struct expr   Expr;
 typedef struct stmts  Stmts;
 typedef struct stmt   Stmt;
 typedef struct prog   Program;
+typedef struct proc   Proc;
+typedef struct procs  Procs;
+typedef struct arguments Arguments;
+typedef struct argument Argument;
+typedef struct procDef  ProcDef;
+typedef int bool;
 
 typedef enum {
     BINOP_ADD, BINOP_SUB, BINOP_MUL
@@ -40,11 +46,13 @@ typedef enum {
 typedef union {
     int    int_val;
     BOOL   bool_val;
+    float  float_val;
 } Value;
 
 typedef struct {
     Type   type;
     Value  val;
+    char*  raw;
 } Constant;
 
 typedef enum {
@@ -114,8 +122,41 @@ struct stmts {
 };
 
 struct prog {
+    Procs   *procs;
+};
+
+struct proc {
+    StmtKind   kind;
+    ProcDef   *proc_def;
     Decls     *decls;
     Stmts     *body;
+    char      *terminator;
+};
+
+struct procDef {
+    char* start_marker;
+    char* name;
+    char* start_paran;
+    Arguments *arguments;
+    StmtKind kind;
+    char* end_paran;
+    
+};
+
+struct arguments {
+    Argument *first;
+    char *separator;
+    Arguments *rest;
+};
+
+struct argument {
+    Type type;
+    char* id;
+};
+
+struct procs {
+    Proc    *first;
+    Procs   *rest;
 };
 
 #endif /* AST_H */

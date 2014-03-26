@@ -32,10 +32,17 @@ void *allocate(int size);
     Expr    *expr_val;
     Stmts   *stmts_val;
     Stmt    *stmt_val;
+    ProcDef *procdef_val;
+    Proc    *proc_val;
+    Procs   *procs_val;
     Program *prog_val;
+    Arguments *args_val;
+    Argument *arg_val;
+    Constant *const_val;
+
 }
 
-%token '(' ')' ';'
+%token '(' ')' ';' ','
 %token ASSIGN_TOKEN 
 %token DO_TOKEN   
 %token ELSE_TOKEN 
@@ -51,9 +58,10 @@ void *allocate(int size);
 %token WHILE_TOKEN 
 %token WRITE_TOKEN
 %token INVALID_TOKEN
-%token <int_val> NUMBER_TOKEN
+%token <const_val> NUMBER_TOKEN
 %token <str_val> IDENT_TOKEN
-
+%token <str_val> PROC_TOKEN
+%token <str_val> END_TOKEN
 /* Standard operator precedence */
 
 %left '+' '-' 
@@ -61,6 +69,11 @@ void *allocate(int size);
 %left UNARY_MINUS
 
 %type <prog_val>  program
+%type <procs_val> procs
+%type <proc_val> proc
+%type <procdef_val> procdef
+%type <args_val> args
+%type <arg_val> arg
 %type <decls_val> declarations
 %type <decl_val>  decl
 %type <stmts_val> statements 
@@ -80,13 +93,84 @@ void *allocate(int size);
 %%
 /*---------------------------------------------------------------------*/
 
-program 
-    : declarations statements
-        { 
-          parsed_program = allocate(sizeof(struct prog));
-          parsed_program->decls = $1;
-          parsed_program->body = $2;
+program
+    : procs
+        {
+         parsed_program = allocate (sizeof (struct prog));          
+         parsed_program->procs = $1;
         }
+    ;
+
+procs
+    : proc  procs
+        {
+          $$ = allocate(sizeof (struct procs));
+          $$->first = $1;
+          $$->rest = $2;
+        }
+    |
+      proc
+        {
+         $$ = allocate(sizeof (struct procs));
+         $$->first = $1;
+         $$->rest = NULL;
+        }
+    ;
+
+proc   
+    : procdef  declarations statements END_TOKEN
+        { 
+          $$ = allocate(sizeof(struct proc));
+          $$->proc_def = $1;
+          $$->decls = $2;
+          $$->body = $3;
+          $$->terminator = $4; 
+        }
+    ;
+
+procdef
+    : PROC_TOKEN IDENT_TOKEN '('  args ')'
+        {
+           $$ = allocate(sizeof (struct procDef));
+           $$->start_marker = $1 ;  
+           $$->name =  $2;
+           $$->start_paran = "("; 
+           $$->arguments = $4;
+           $$->end_paran = ")" ; //TODO: check if $
+        }
+    ;
+
+args
+    : arg  
+        {
+          $$ = allocate(sizeof (struct arguments));
+          $$->first = $1;
+          $$->rest = NULL;
+        }
+
+    |
+      arg ',' args
+        {
+          $$ = allocate(sizeof (struct arguments));
+          $$->first = $1;
+          $$->separator = ",";
+          $$->rest = $3;
+        }
+     |
+        {
+         $$ = NULL;
+        }
+    ;
+
+
+arg
+    : INT_TOKEN IDENT_TOKEN 
+        {
+          $$ = allocate(sizeof (struct argument));
+          $$->type = INT_TYPE;
+          $$->id = $2;
+        }
+
     ;
 
 declarations
@@ -302,7 +386,7 @@ expr
           $$ = allocate(sizeof(struct expr));
           $$->lineno = ln;
           $$->kind = EXPR_CONST;
-          $$->constant.val.int_val = $1;
+          $$->constant = *$1;
           $$->constant.type = INT_TYPE;
           $$->e1 = NULL;
           $$->e2 = NULL;
