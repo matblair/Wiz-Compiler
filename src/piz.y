@@ -13,6 +13,7 @@
 #include "ast.h"
 #include "std.h"
 #include "missing.h"
+#include "liz.h"
 
 extern Program *parsed_program;
 extern void    report_error_and_exit(const char *msg);
@@ -21,7 +22,9 @@ extern char    *yytext;
 int ln = 1;
 void yyerror(const char *msg);
 void *allocate(int size);
-
+int parse_string(char * inputstring);
+extern void yy_delete_buffer(YY_BUFFER_STATE);
+extern YY_BUFFER_STATE yy_scan_string(const char *string);
 %}
 
 %union {
@@ -438,5 +441,12 @@ allocate(int size) {
     return addr;
 }
 
+int parse_string(char *input_string){
+    int result ;
+    YY_BUFFER_STATE buffer = yy_scan_string(input_string);
+    result = yyparse();
+    yy_delete_buffer(buffer);
+    return result;
+}
 /*---------------------------------------------------------------------*/
 

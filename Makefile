@@ -33,7 +33,7 @@ CC = gcc -Wall
 wiz: $(OBJ) | $(BIN)
 	$(CC) -o $(BIN)$@ $(addprefix $(BUILD), $(OBJ))
 
-run_tests: $(TESTOBJ) | $(BIN)
+run_tests: $(TESTOBJ) $(filter-out wiz.%, $(OBJ)) | $(BIN)
 	$(CC) -o $(BIN)$@ $(addprefix $(BUILD), $^)
 	$(BIN)$@
 
@@ -49,7 +49,7 @@ piz.c piz.h:  | $(AUTO)
 	bison --debug -v -d $(SRCD)piz.y -o $(AUTO)piz.c
 
 liz.c liz.h: piz.h  | $(AUTO)
-	flex -s -o$(AUTO)liz.c $(SRCD)liz.l
+	flex -s -o$(AUTO)liz.c --header-file=$(AUTO)liz.h $(SRCD)liz.l
 
 $(CSRC) $(TESTS):
 

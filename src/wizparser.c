@@ -12,7 +12,6 @@
 #include    "pretty.h"
 #include    "missing.h"
 
-const char  *progname;
 const char  *iz_infile;
 Program     *parsed_program = NULL;
 
@@ -21,38 +20,9 @@ extern FILE *yyin;
 static void usage(void);
 void        report_error_and_exit(const char *msg);
 void        *checked_malloc(int num_bytes);
+extern int parse_string(char * input_sring);
 
-int
-wizparser(int argc, char **argv) {
-
-    const char  *in_filename;
-    FILE        *fp = stdout;
-    BOOL        pretty_print_only;
-
-    progname = argv[0];
-    pretty_print_only = FALSE;
-
-    /* Process command line */
-
-    if ((argc < 2) || (argc > 3)) {
-        usage();
-        exit(EXIT_FAILURE);
-    }
-
-    if (argc == 2)
-        in_filename = argv[1];
-
-    if (argc == 3 && streq(argv[1],"-p")) {
-        pretty_print_only = TRUE;
-        in_filename = argv[2];
-    }
-    
-    iz_infile = in_filename;
-    yyin = fopen(in_filename, "r");
-    if (yyin == NULL) {
-        perror(in_filename);
-        exit(EXIT_FAILURE);
-    }
+int parse(BOOL pretty_print_only, FILE *fp){
 
     if (yyparse() != 0) {
         /* The error message will already have been printed. */
@@ -65,15 +35,31 @@ wizparser(int argc, char **argv) {
         report_error_and_exit("Unable to generate code");
 
     return 0;
+ 
+}
+
+int wizparser(const char * in_filename, BOOL pretty_print_only) {
+
+    FILE        *fp = stdout;
+
+    iz_infile = in_filename;
+    yyin = fopen(in_filename, "r");
+    if (yyin == NULL) {
+        perror(in_filename);
+        exit(EXIT_FAILURE);
+    }
+
+    return parse(pretty_print_only, fp);
+}
+
+int wizparse_str(char * strinput){
+    int result = parse_string(strinput);
+    return  result;
+
 }
 
 /*---------------------------------------------------------------------*/
 
-static void
-usage(void) {
-
-    printf("usage: wiz [-p] iz_source_file\n");
-}
 
 void
 report_error_and_exit(const char *msg) {
