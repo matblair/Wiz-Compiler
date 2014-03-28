@@ -24,6 +24,9 @@ typedef struct procs        Procs;
 typedef struct prog         Program;
 typedef struct func         Function;
 typedef struct args         Args;
+typedef struct arrayelems   ArrayElems;
+typedef struct arrayelem    ArrayElem;
+typedef struct array        Array;
 
 typedef enum {
     BINOP_ADD, BINOP_SUB, BINOP_MUL, BINOP_DIV, BINOP_OR, BINOP_AND,
@@ -53,10 +56,15 @@ typedef enum {
 extern const char *unopname[];
 
 typedef enum {
-    BOOL_TYPE, INT_TYPE, FLOAT_TYPE
+    ARRAY_RANGE, ARRAY_INDEX
+} ArrayElemType;
+
+typedef enum {
+    BOOL_TYPE, INT_TYPE, FLOAT_TYPE, INT_ARRAY_TYPE, 
+    FLOAT_ARRAY_TYPE, BOOL_ARRAY_TYPE
 } Type;
 
-#define TYPE_NAMES "bool", "int", "float"
+#define TYPE_NAMES "bool", "int", "float", "int", "float", "bool"
 
 extern const char *typenames[];
 
@@ -77,7 +85,7 @@ typedef enum {
 
 struct expr {
     int       lineno;
-    ExprKind  kind;
+    ExprKind  kind;           
     char      *id;          /* for identifiers */
     Constant  constant;     /* for constant values */
     UnOp      unop;         /* for unary operators */
@@ -90,6 +98,7 @@ struct decl {
     int       lineno;
     char      *id;
     Type      type;
+    Array     *array;
 };
 
 struct decls {
@@ -98,7 +107,8 @@ struct decls {
 };
 
 typedef enum {
-    STMT_ASSIGN, STMT_COND, STMT_READ, STMT_WHILE, STMT_WRITE, STMT_FUNC
+    STMT_ASSIGN, STMT_COND, STMT_READ, STMT_WHILE, STMT_WRITE, STMT_FUNC, 
+    STMT_ARRAY_ASSIGN, STMT_ARRAY, STMT_READ_ARRAY
 } StmtKind;
 
 typedef struct {
@@ -112,6 +122,23 @@ typedef struct {
     Stmts     *else_branch;
 } Cond;
 
+struct array {
+    char       *id;
+    ArrayElems *values;
+};
+
+struct arrayelems {
+    ArrayElem *first;
+    ArrayElems *rest;
+};
+
+struct arrayelem {
+    int          upper;
+    int          lower;
+    ArrayElemType type;
+    int          index;
+};
+
 typedef struct {
     Expr      *cond;
     Stmts     *body;
@@ -124,6 +151,7 @@ typedef union {
     char      *read;
     Expr      *write;
     Function  *func;
+    Array     *array;
     While     loop;
 } SInfo;
 
@@ -144,8 +172,8 @@ struct func {
 };
 
 struct args {
-   Expr    *first;
-   Args    *rest;
+   Expr       *first;
+   Args       *rest;
 };
 
 struct param {
@@ -183,7 +211,6 @@ struct prog {
     Procs   *procedures;
     // Possibly something else here?
 };
-
 
 
 #endif /* AST_H */

@@ -61,16 +61,16 @@ write           { return WRITE_TOKEN; }
 
 
 
-[-+*,;()]        { return yytext[0]; }         /* single character tokens */
+[-+*,;()\[\]]   { return yytext[0]; }         /* single character tokens */
 
-":="            { return ASSIGN_TOKEN; } /* An assignment */
-
-"<"				{ return LT_TOKEN;   } /* Less than  */
-"<="			{ return LTEQ_TOKEN; } /* Less than or equal to  */
-">"				{ return GT_TOKEN;   } /* Greater than  */
-">="			{ return GTEQ_TOKEN; } /* Greater than or equal to */
-"="				{ return EQ_TOKEN;   } /* Equal to */
-"!="			{ return NOTEQ_TOKEN;} /* Not equal to */
+":="            { return ASSIGN_TOKEN;   } /* An assignment */
+".."			{ return INTERVAL_TOKEN; } /* An interval */
+"<"				{ return LT_TOKEN;       } /* Less than  */
+"<="			{ return LTEQ_TOKEN; 	 } /* Less than or equal to  */
+">"				{ return GT_TOKEN;  	 } /* Greater than  */
+">="			{ return GTEQ_TOKEN; 	 } /* Greater than or equal to */
+"="				{ return EQ_TOKEN;   	 } /* Equal to */
+"!="			{ return NOTEQ_TOKEN;	 } /* Not equal to */
 
 "#"{nonl}*{nl}  { ln++; } /* Any comments */
 
