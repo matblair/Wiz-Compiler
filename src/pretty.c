@@ -36,11 +36,9 @@ void print_procedures(FILE *fp, Procs *procs){
 
     //Go through and count the array
     int num_procs=0;
-    Proc *current = procs->first;
     Procs *rest = procs;
     while(rest!=NULL){
         num_procs++;
-        current = rest->first;
         rest = rest->rest;
     }
 

@@ -52,6 +52,7 @@ val 			{ return VAL_TOKEN;   }
 while           { return WHILE_TOKEN; }
 write           { return WRITE_TOKEN; }
 
+
 {NUM}           { yylval.int_val = atoi(yytext); 
 	              return NUMBER_TOKEN; }
 {DEC}			{ yylval.int_val = atof(yytext); 

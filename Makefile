@@ -1,5 +1,5 @@
 BIN=./bin/
-OBJ=./obj/
+BUILD=./obj/
 AUTO=./auto/
 SRCD=./src/
 
@@ -16,7 +16,6 @@ CC = gcc -Wall
 
 
 #all: piz liz wiz
-
 wiz: $(OBJ) | $(BIN)
 	@$(CC) -o $(BIN)$@ $(addprefix $(BUILD), $(OBJ))
 
@@ -26,7 +25,7 @@ piz: piz.o $(OBJ) | $(BIN)
 
 
 liz: piz.o liz.o $(OBJ)  | $(BIN)
-	@$(CC) -o $(BIN)$@ $(addprefix $(BUILD), $^)
+	@ $(CC) -o $(BIN)$@ $(addprefix $(BUILD), $^)
 
 piz.c piz.h:  | $(AUTO)
 	@bison --debug -v -d $(SRCD)piz.y -o $(AUTO)piz.c
@@ -40,7 +39,11 @@ clean:
 	/bin/rm -rf $(BUILD) $(AUTO) $(BIN)
 
 $(OBJ): %.o  :  %.c | $(BUILD)
+	@echo Analysing $(basename $(@F)).c!
+	@gcc  --analyze $(filter  %$(basename $(@F)).c, $(SRC))  -I$(AUTO) -I$(SRCD) -o $(BUILD)$@
 	@gcc  -c $(filter  %$(basename $(@F)).c, $(SRC))  -I$(AUTO) -I$(SRCD) -o $(BUILD)$@
+	@echo Finished $(basename $(@F)).c!
+
 
 
 print:
