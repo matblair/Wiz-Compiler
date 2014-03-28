@@ -13,24 +13,26 @@
 #include    "missing.h"
 
 const char  *iz_infile;
-Program     *parsed_program = NULL;
 
-extern FILE *yyin;
 
 static void usage(void);
 void        report_error_and_exit(const char *msg);
 void        *checked_malloc(int num_bytes);
+
 extern int parse_string(char * input_sring);
+extern int parse_file(FILE *, parserOutput *);
 
-int parse(BOOL pretty_print_only, FILE *fp){
+int parse(BOOL pretty_print_only, FILE *fpin, FILE *fpout){
+    
+    parserOutput *output = checked_malloc(sizeof (parserOutput));
 
-    if (yyparse() != 0) {
+    if (parse_file(fpin,output)  != 0) {
         /* The error message will already have been printed. */
         exit(EXIT_FAILURE);
     }
 
     if (pretty_print_only) 
-        pretty_prog(fp, parsed_program);
+        pretty_prog(fpout, output->parsed_program);
     else
         report_error_and_exit("Unable to generate code");
 
@@ -41,15 +43,16 @@ int parse(BOOL pretty_print_only, FILE *fp){
 int wizparser(const char * in_filename, BOOL pretty_print_only) {
 
     FILE        *fp = stdout;
+    FILE *fpin;
 
     iz_infile = in_filename;
-    yyin = fopen(in_filename, "r");
-    if (yyin == NULL) {
+    fpin = fopen(in_filename, "r");
+    if (fpin == NULL) {
         perror(in_filename);
         exit(EXIT_FAILURE);
     }
 
-    return parse(pretty_print_only, fp);
+    return parse(pretty_print_only, fpin, fp);
 }
 
 int wizparse_str(char * strinput){

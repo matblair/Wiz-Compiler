@@ -37,12 +37,15 @@ fi              { return FI_TOKEN; }
 if              { return IF_TOKEN; }
 int             { return INT_TOKEN; }
 bool            { return BOOL_TOKEN; }
+float           { return FLOAT_TOKEN; }
 od              { return OD_TOKEN; }
 read            { return READ_TOKEN; }
 then            { return THEN_TOKEN; }
 true            { return TRUE_TOKEN; }
 while           { return WHILE_TOKEN; }
 write           { return WRITE_TOKEN; }
+val             { return VAL_TOKEN; }
+ref             { return REF_TOKEN; }
 proc            { yylval.str_val = (char *) strdup(yytext);  return PROC_TOKEN; }
 end             { yylval.str_val = (char *) strdup(yytext); return END_TOKEN; }
 

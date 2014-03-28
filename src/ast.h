@@ -40,8 +40,12 @@ typedef enum {
 extern const char *unopname[];
 
 typedef enum {
-    BOOL_TYPE, INT_TYPE
+    BOOL_TYPE, INT_TYPE, FLOAT_TYPE
 } Type;
+
+typedef enum{
+    VAL, REF
+}ArgType;
 
 typedef union {
     int    int_val;
@@ -126,30 +130,24 @@ struct prog {
 };
 
 struct proc {
-    StmtKind   kind;
     ProcDef   *proc_def;
     Decls     *decls;
     Stmts     *body;
-    char      *terminator;
 };
 
 struct procDef {
-    char* start_marker;
     char* name;
-    char* start_paran;
     Arguments *arguments;
-    StmtKind kind;
-    char* end_paran;
     
 };
 
 struct arguments {
     Argument *first;
-    char *separator;
     Arguments *rest;
 };
 
 struct argument {
+    ArgType arg_type;
     Type type;
     char* id;
 };
@@ -158,5 +156,10 @@ struct procs {
     Proc    *first;
     Procs   *rest;
 };
+
+typedef struct{
+    Program *parsed_program;
+    char ** token_table;
+} parserOutput;
 
 #endif /* AST_H */

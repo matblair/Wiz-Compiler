@@ -15,7 +15,7 @@
 #include "missing.h"
 #include "liz.h"
 
-extern Program *parsed_program;
+Program *parsed_program;
 extern void    report_error_and_exit(const char *msg);
 extern char    *yytext;
 
@@ -42,6 +42,8 @@ extern YY_BUFFER_STATE yy_scan_string(const char *string);
     Arguments *args_val;
     Argument *arg_val;
     Constant *const_val;
+    ArgType  argtype_val;
+    Type     datatype_val;
 
 }
 
@@ -54,6 +56,7 @@ extern YY_BUFFER_STATE yy_scan_string(const char *string);
 %token IF_TOKEN    
 %token INT_TOKEN 
 %token BOOL_TOKEN 
+%token FLOAT_TOKEN
 %token OD_TOKEN     
 %token READ_TOKEN 
 %token THEN_TOKEN 
@@ -61,10 +64,12 @@ extern YY_BUFFER_STATE yy_scan_string(const char *string);
 %token WHILE_TOKEN 
 %token WRITE_TOKEN
 %token INVALID_TOKEN
+%token VAL_TOKEN
+%token REF_TOKEN
 %token <const_val> NUMBER_TOKEN
 %token <str_val> IDENT_TOKEN
-%token <str_val> PROC_TOKEN
-%token <str_val> END_TOKEN
+%token PROC_TOKEN
+%token END_TOKEN
 /* Standard operator precedence */
 
 %left '+' '-' 
@@ -77,8 +82,10 @@ extern YY_BUFFER_STATE yy_scan_string(const char *string);
 %type <procdef_val> procdef
 %type <args_val> args
 %type <arg_val> arg
+%type <argtype_val> argtypeval
 %type <decls_val> declarations
 %type <decl_val>  decl
+%type <datatype_val> datatype
 %type <stmts_val> statements 
 %type <stmt_val>  stmt
 %type <expr_val>  expr 
@@ -92,6 +99,8 @@ extern YY_BUFFER_STATE yy_scan_string(const char *string);
 %type <int_val>   get_lineno
 
 %start program
+
+%token-table
 
 %%
 /*---------------------------------------------------------------------*/
@@ -127,7 +136,6 @@ proc
           $$->proc_def = $1;
           $$->decls = $2;
           $$->body = $3;
-          $$->terminator = $4; 
         }
     ;
 
@@ -135,12 +143,16 @@ procdef
     : PROC_TOKEN IDENT_TOKEN '('  args ')'
         {
            $$ = allocate(sizeof (struct procDef));
-           $$->start_marker = $1 ;  
            $$->name =  $2;
-           $$->start_paran = "("; 
            $$->arguments = $4;
-           $$->end_paran = ")" ; //TODO: check if $
         }
+    | PROC_TOKEN IDENT_TOKEN '(' ')'
+        {
+           $$ = allocate(sizeof (struct procDef));
+           $$->name =  $2;
+           $$->arguments = NULL;
+        }
+
     ;
 
 args
@@ -152,29 +164,56 @@ args
         }
 
     |
-      arg ',' args
+      arg ','  args
         {
           $$ = allocate(sizeof (struct arguments));
           $$->first = $1;
-          $$->separator = ",";
           $$->rest = $3;
-        }
-     |
-        {
-         $$ = NULL;
         }
     ;
 
 
 arg
-    : INT_TOKEN IDENT_TOKEN 
+    :   argtypeval datatype IDENT_TOKEN 
         {
           $$ = allocate(sizeof (struct argument));
           $$->type = INT_TYPE;
-          $$->id = $2;
+          $$->id = $3;
+          $$->arg_type= $1;
         }
 
     ;
+
+argtypeval
+    :   VAL_TOKEN
+        {
+          $$ = VAL;
+        }
+    | REF_TOKEN
+        {
+          $$ = REF;
+        }
+    ;
+
+
+datatype
+    : INT_TOKEN
+        {
+          $$ = INT_TYPE;
+        }
+    | BOOL_TOKEN
+        {
+          $$ = BOOL_TYPE;
+        }
+    | FLOAT_TOKEN
+        {
+          $$ = FLOAT_TYPE;
+
+        }
+
+    ;
+
+
 
 declarations
     : decl declarations
@@ -189,21 +228,14 @@ declarations
     ;
         
 decl
-    : INT_TOKEN IDENT_TOKEN ';'
+    : datatype IDENT_TOKEN ';'
         {
           $$ = allocate(sizeof(struct decl));
           $$->lineno = ln;
           $$->id = $2;
-          $$->type = INT_TYPE;
+          $$->type = $1;
         }
 
-    | BOOL_TOKEN IDENT_TOKEN ';'
-        {
-          $$ = allocate(sizeof(struct decl));
-          $$->lineno = ln;
-          $$->id = $2;
-          $$->type = BOOL_TYPE;
-        }
     ;
 
 get_lineno
@@ -439,6 +471,24 @@ allocate(int size) {
     if (addr == NULL) 
         report_error_and_exit("Out of memory");
     return addr;
+}
+
+int parse_file(FILE *fp, parserOutput *parser_output){
+    int result ;
+    int i=0, ttlen;
+    yyin = fp;
+    result = yyparse();
+    parser_output->parsed_program = parsed_program;
+    /*parser_output->token_table = allocate(sizeof(yytname)) ;
+    ttlen = sizeof(yytname)/sizeof(char*); 
+    for(i=0;i<ttlen-1; i++){
+        printf("%d length of string %s, %lu with size %lu\n",i, yytname[i], strlen(yytname[i]),
+        sizeof(yytname[i]));
+        parser_output->token_table[i] =  allocate(sizeof(yytname[i]));
+        //strncpy(parser_output->token_table[i], yytname[i], strlen(yytname[i]));
+    }*/
+    return result;
+
 }
 
 int parse_string(char *input_string){

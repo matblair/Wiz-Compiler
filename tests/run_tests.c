@@ -1,10 +1,14 @@
 #include "seatest.h"
 
 void test_fixture_one( void );
+void test_suite_program_outline(void);
+void test_suite_proc_args(void);
 
 void all_tests( void )
 {
 	test_fixture_one();
+    test_suite_program_outline();
+    test_suite_proc_args();
 	// add new test fixtures here.
 }
 

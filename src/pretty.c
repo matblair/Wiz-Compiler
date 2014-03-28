@@ -8,6 +8,8 @@
 #include <stdio.h>
 #include "ast.h"
 
+#define token_terminator ";"
+
 extern void report_error_and_exit(const char *msg);
 
 void print_stmt_while(FILE *fp, While rec, int level);
@@ -26,6 +28,22 @@ void print_declarations(FILE *, Decls *, int level);
 void print_statements(FILE *, Stmts *, int level);
 void print(FILE *fp, Procs *rec, int level);
 
+char* get_datatype(Type datatype){
+    switch (datatype){
+        case INT_TYPE: return "int";
+        case BOOL_TYPE: return "bool";
+        case FLOAT_TYPE: return "float";
+        default: report_error_and_exit("Unknow datatype...");
+    }
+}
+
+char* get_argtype(ArgType argtype){
+    switch (argtype){
+        case REF : return "ref";
+        case VAL : return "val";
+        default: report_error_and_exit("unknown argtype...");
+    }
+}
 
 void pretty_prog(FILE *fp, Program *prog) {
 
@@ -51,29 +69,30 @@ void print_proc(FILE *fp, Proc *rec, int level){
     print_procdef(fp , rec->proc_def, level);
     print_declarations(fp , rec->decls, level+1);
     print_statements(fp, rec->body, level+1);
-    fprintf(fp,"%s", rec->terminator);
+    fprintf(fp,"%s", "end");
 }
 
 void print_procdef(FILE *fp, ProcDef *rec, int level){
-    fprintf(fp, "%s ", rec->start_marker);
+    fprintf(fp, "%s ", "proc");
     fprintf(fp, "%s", rec->name);
-    fprintf(fp, "%s", rec->start_paran);
+    fprintf(fp, "%s", "(");
     
     print_arguments(fp, rec->arguments, level);
 
-    fprintf(fp, "%s\n", rec->end_paran);
+    fprintf(fp, "%s\n", ")");
 }
 
 void print_arguments(FILE *fp, Arguments *rec, int level){
     if (rec == NULL) return;
 
     print_argument(fp, rec->first, level);
-    fprintf(fp, "%s", rec->separator);
+    //fprintf(fp, "%s", rec->separator);
     print_arguments(fp, rec->rest, level);
 }
 
 void print_argument(FILE *fp, Argument *rec, int level){
-    fprintf(fp, "%s ", "Type"); //TODO: Fix type to the correct
+    fprintf(fp, "%s ", get_argtype(rec->arg_type)); //TODO: Fix type to the correct
+    fprintf(fp, "%s ", get_datatype(rec->type)); //TODO: Fix type to the correct
     fprintf(fp, "%s ", rec->id);
 }
 
@@ -98,7 +117,6 @@ void print_statements(FILE *fp, Stmts *rec, int level){
 }
 
 void print_statement(FILE *fp, Stmt *rec, int level){
-    print_tabs(fp, level);
     switch (rec->kind){
         case STMT_ASSIGN: print_stmt_assign(fp, rec->info.assign, level);
                           break;
@@ -110,16 +128,21 @@ void print_statement(FILE *fp, Stmt *rec, int level){
 }
 
 void print_stmt_assign(FILE *fp, Assign rec, int level){
-    fprintf(fp, "%s ", rec.asg_id);
+    
+    print_tabs(fp, level);
+    fprintf(fp, "%s := ", rec.asg_id);
     print_expr(fp, rec.asg_expr, level);
+    fprintf(fp, "%s", ";");
 
 }
 
 
 void print_stmt_while(FILE *fp, While rec, int level){
-    fprintf(fp, "WHILE\n"); //TODO : fix this remove token
+    print_tabs(fp, level);
+    fprintf(fp, "while\n"); //TODO : fix this remove token
     print_statements(fp, rec.body, level +1 );
-    fprintf(fp, "END\n"); //TODO: fix this
+    print_tabs(fp, level);
+    fprintf(fp, "end\n"); //TODO: fix this
 }
 
 void print_expr(FILE *fp, Expr *rec, int level){
