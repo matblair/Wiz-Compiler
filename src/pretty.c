@@ -5,6 +5,7 @@
     For use in the COMP90045 project 2014.
 -----------------------------------------------------------------------*/
 
+#include <stdlib.h>
 #include <stdio.h>
 #include "ast.h"
 
@@ -17,16 +18,16 @@ void print_statement(FILE *fp, Stmt *rec, int level);
 void print_stmt_assign(FILE *fp, Assign rec, int level);
 void print_expr(FILE *fp, Expr *rec,int level);
 void print_expr_const(FILE *fp, Constant rec,int level);
-void print_tabs(FILE *fp, int numberOfTabs);
 void print_proc(FILE *fp, Proc *proc, int level);
 void print_procs(FILE *fp, Procs *procs, int level);
 void print_procdef(FILE *fp, ProcDef *rec, int level);
-void print_arguments(FILE *fp, Arguments *args, int level);
-void print_argument(FILE *fp, Argument *arg, int level);
+void print_arguments(FILE *fp, Arguments *args);
+void print_argument(FILE *fp, Argument *arg);
 void print_program(FILE *, Program *);
 void print_declarations(FILE *, Decls *, int level);
 void print_statements(FILE *, Stmts *, int level);
 void print(FILE *fp, Procs *rec, int level);
+char * sp(int );
 
 char* get_datatype(Type datatype){
     switch (datatype){
@@ -77,24 +78,59 @@ void print_procdef(FILE *fp, ProcDef *rec, int level){
     fprintf(fp, "%s", rec->name);
     fprintf(fp, "%s", "(");
     
-    print_arguments(fp, rec->arguments, level);
+    print_arguments(fp, rec->arguments);
 
     fprintf(fp, "%s\n", ")");
 }
 
-void print_arguments(FILE *fp, Arguments *rec, int level){
+void print_arguments(FILE *fp, Arguments *rec){
     if (rec == NULL) return;
 
-    print_argument(fp, rec->first, level);
-    //fprintf(fp, "%s", rec->separator);
-    print_arguments(fp, rec->rest, level);
+    print_argument(fp, rec->first);
+    
+    if (rec->rest != NULL) fprintf(fp, ", ");
+    print_arguments(fp, rec->rest);
 }
 
-void print_argument(FILE *fp, Argument *rec, int level){
-    fprintf(fp, "%s ", get_argtype(rec->arg_type)); //TODO: Fix type to the correct
-    fprintf(fp, "%s ", get_datatype(rec->type)); //TODO: Fix type to the correct
-    fprintf(fp, "%s ", rec->id);
+void print_argument(FILE *fp, Argument *rec){
+    fprintf(fp, "%s ", get_argtype(rec->arg_type)); 
+    fprintf(fp, "%s ", get_datatype(rec->type)); 
+    fprintf(fp, "%s", rec->id);
 }
+
+void print_dim(FILE *fp, Dimension *dim){
+    if (dim == NULL) return;
+    fprintf(fp, "%d..%d", dim->lb, dim->ub);
+}
+
+void print_dims(FILE *fp, Dimensions *dims){
+    if (dims == NULL) return;
+    print_dim(fp,  dims->first);
+    if (dims->rest != NULL) fprintf(fp, ",");
+    print_dims(fp, dims->rest);
+
+}
+void print_declaration(FILE *fp, Decl *decl, int level) {
+
+    if (decl == NULL) {
+        return;
+    }
+
+    fprintf(fp, "%s%s %s",sp(level), get_datatype( decl->type), decl->id);
+   
+    //print optional dimensions
+    if (decl->dims == NULL) {
+        fprintf(fp, ";\n");
+        return;
+    }
+
+    fprintf(fp, "[");
+    print_dims(fp, decl->dims);
+    fprintf(fp, "]");
+    fprintf(fp, ";\n");
+
+}
+
 
 void print_declarations(FILE *fp, Decls *declarations, int level) {
 
@@ -102,8 +138,7 @@ void print_declarations(FILE *fp, Decls *declarations, int level) {
         return;
     }
 
-    Decl *decl = declarations->first;
-    fprintf(fp, "%s\n", decl->id);
+    print_declaration(fp, declarations->first, level);
 
     print_declarations(fp, declarations->rest, level);
 }
@@ -129,20 +164,17 @@ void print_statement(FILE *fp, Stmt *rec, int level){
 
 void print_stmt_assign(FILE *fp, Assign rec, int level){
     
-    print_tabs(fp, level);
-    fprintf(fp, "%s := ", rec.asg_id);
+    fprintf(fp, "%s%s := ",sp(level), rec.asg_id);
     print_expr(fp, rec.asg_expr, level);
     fprintf(fp, "%s", ";");
 
 }
 
-
 void print_stmt_while(FILE *fp, While rec, int level){
-    print_tabs(fp, level);
-    fprintf(fp, "while\n"); //TODO : fix this remove token
+    fprintf(fp, "%swhile ", sp(level) ); //TODO : fix this remove token
+    fprintf(fp, "--TODOEXPR--  %s \n", "do");
     print_statements(fp, rec.body, level +1 );
-    print_tabs(fp, level);
-    fprintf(fp, "end\n"); //TODO: fix this
+    fprintf(fp, "%send\n",sp(level)); //TODO: fix this
 }
 
 void print_expr(FILE *fp, Expr *rec, int level){
@@ -158,8 +190,13 @@ void print_expr_const(FILE *fp, Constant rec, int level){
 }
 
 
-void print_tabs(FILE *fp, int numberOfTabs){
-    for(int i=0; i<numberOfTabs; i++)
-        fprintf(fp, "\t");
+
+char * sp(int numberOfTabs){
+    int i;
+    char * space = malloc(sizeof (char) * numberOfTabs + 1);
+    for( i=0; i<numberOfTabs; i++)
+      space[i]='\t';
+    space[i]='\0';
+    return space;
 }
 

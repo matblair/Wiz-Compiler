@@ -10,6 +10,8 @@
 
 #include "std.h"
 
+typedef struct dimensions Dimensions;
+typedef struct dimension Dimension;
 typedef struct decl   Decl;
 typedef struct decls  Decls;
 typedef struct expr   Expr;
@@ -78,6 +80,7 @@ struct decl {
     int       lineno;
     char      *id;
     Type      type;
+    Dimensions *dims;
 };
 
 struct decls {
@@ -150,6 +153,7 @@ struct argument {
     ArgType arg_type;
     Type type;
     char* id;
+    Dimensions *dims;
 };
 
 struct procs {
@@ -161,5 +165,16 @@ typedef struct{
     Program *parsed_program;
     char ** token_table;
 } parserOutput;
+
+struct dimension{
+    int lb;
+    int ub;
+};
+
+struct dimensions{
+    Dimension *first;
+    Dimensions *rest;
+};
+
 
 #endif /* AST_H */

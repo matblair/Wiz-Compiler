@@ -20,11 +20,13 @@ extern void    report_error_and_exit(const char *msg);
 extern char    *yytext;
 
 int ln = 1;
+char *rule;
 void yyerror(const char *msg);
 void *allocate(int size);
 int parse_string(char * inputstring);
 extern void yy_delete_buffer(YY_BUFFER_STATE);
 extern YY_BUFFER_STATE yy_scan_string(const char *string);
+BOOL has_parse_error ;
 %}
 
 %union {
@@ -44,10 +46,12 @@ extern YY_BUFFER_STATE yy_scan_string(const char *string);
     Constant *const_val;
     ArgType  argtype_val;
     Type     datatype_val;
+    Dimensions *dims_val;
+    Dimension *dim_val;
 
 }
 
-%token '(' ')' ';' ','
+%token '(' ')' ';' ',' '[' ']' '.'
 %token ASSIGN_TOKEN 
 %token DO_TOKEN   
 %token ELSE_TOKEN 
@@ -86,11 +90,12 @@ extern YY_BUFFER_STATE yy_scan_string(const char *string);
 %type <decls_val> declarations
 %type <decl_val>  decl
 %type <datatype_val> datatype
+%type <dim_val> dim
+%type <dims_val> dims
 %type <stmts_val> statements 
 %type <stmt_val>  stmt
 %type <expr_val>  expr 
 %type <expr_val>  bool_expr 
-
 %type <int_val>   assign
 %type <int_val>   start_cond
 %type <int_val>   start_read
@@ -174,14 +179,15 @@ args
 
 
 arg
-    :   argtypeval datatype IDENT_TOKEN 
+      :  argtypeval datatype IDENT_TOKEN 
         {
           $$ = allocate(sizeof (struct argument));
-          $$->type = INT_TYPE;
+          $$->type = $2;
           $$->id = $3;
           $$->arg_type= $1;
-        }
+          //TODO: remove this $$->dims = $5;
 
+        }
     ;
 
 argtypeval
@@ -210,11 +216,12 @@ datatype
           $$ = FLOAT_TYPE;
 
         }
+    
 
     ;
 
-
-
+    
+        
 declarations
     : decl declarations
         {
@@ -228,16 +235,46 @@ declarations
     ;
         
 decl
-    : datatype IDENT_TOKEN ';'
+     :  datatype IDENT_TOKEN '[' dims ']' ';'
         {
           $$ = allocate(sizeof(struct decl));
           $$->lineno = ln;
           $$->id = $2;
           $$->type = $1;
+          $$->dims = $4;
         }
-
+     | datatype IDENT_TOKEN ';'
+        {
+          $$ = allocate(sizeof(struct decl));
+          $$->lineno = ln;
+          $$->id = $2;
+          $$->type = $1;
+        } 
     ;
 
+dims 
+    :  dim ',' dims
+        {
+           $$ = allocate(sizeof (struct dimensions));
+           $$->first= $1;
+           $$->rest = $3;
+        }
+    | dim
+        {
+          $$ = allocate(sizeof (struct dimensions));
+          $$->first = $1;
+          $$->rest = NULL;
+        }
+    ;
+
+dim
+    : NUMBER_TOKEN '.' '.' NUMBER_TOKEN
+        {
+          $$ = allocate(sizeof (struct dimension));
+          $$->lb = $1->val.int_val;
+          $$->ub = $4->val.int_val;
+        }
+    ;
 get_lineno
     : /* empty */
         { $$ = ln; }
@@ -278,7 +315,9 @@ statements                             /* non-empty list of statements */
         }
 
     | error ';' { yyerrok; } statements
-        { $$ = $4; }
+        { 
+          $$ = $4; 
+        }
     ;
 
 stmt
@@ -451,14 +490,16 @@ bool_expr
           $$->e2 = NULL;
         }
     ;
+
 %%
 
 /*---------------------------------------------------------------------*/
 
 void 
 yyerror(const char *msg) {
-
-    fprintf(stderr, "**** Input line %d, near `%s': %s\n", ln, yytext, msg);
+    has_parse_error = 1;
+    char *linebuf = "TODO Acutal lilne";
+    fprintf(stderr, "**** Input line %d, %s, near `%s': %s\n",  ln,linebuf, yytext, msg);
     return;
 }
 
@@ -476,8 +517,10 @@ allocate(int size) {
 int parse_file(FILE *fp, parserOutput *parser_output){
     int result ;
     int i=0, ttlen;
+    has_parse_error = 0;
     yyin = fp;
-    result = yyparse();
+    result = yyparse() || has_parse_error;
+    
     parser_output->parsed_program = parsed_program;
     /*parser_output->token_table = allocate(sizeof(yytname)) ;
     ttlen = sizeof(yytname)/sizeof(char*); 
@@ -493,8 +536,9 @@ int parse_file(FILE *fp, parserOutput *parser_output){
 
 int parse_string(char *input_string){
     int result ;
+    has_parse_error = 0;
     YY_BUFFER_STATE buffer = yy_scan_string(input_string);
-    result = yyparse();
+    result = yyparse() || has_parse_error ;
     yy_delete_buffer(buffer);
     return result;
 }

@@ -20,11 +20,18 @@ void test_isvalid_morethanoneproc(){
     assert_true(is_valid ==0);
 }
 
+void test_isinvalid_procemptybody(){
+    int is_valid;
+    is_valid =  wizparse_str("proc main() end");
+    assert_true(is_valid !=0 );
+}
+
 void  test_suite_program_outline( void )
 {
 	test_fixture_start();               // starts a fixture
-	run_test(test_isvalid_morethanoneproc);
-    run_test(test_isinvalid_justproc);
     run_test(test_isvalid_singleproc);
+	run_test(test_isvalid_morethanoneproc);
+    run_test(test_isinvalid_procemptybody);
+    run_test(test_isinvalid_justproc);
 	test_fixture_end();                 // ends a fixture
 }
