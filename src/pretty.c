@@ -15,6 +15,7 @@
 extern void report_error_and_exit(const char *msg);
 
 void print_stmt_while(FILE *fp, While rec, int level);
+void print_stmt_if(FILE *fp, Cond rec, int level);
 void print_statement(FILE *fp, Stmt *rec, int level);
 void print_stmt_assign(FILE *fp, Assign rec, int level);
 void print_expr(FILE *fp, Expr *rec,int level);
@@ -157,16 +158,16 @@ void print_statement(FILE *fp, Stmt *rec, int level){
                           break;
         case  STMT_WHILE : print_stmt_while(fp, rec->info.loop, level);
                            break;
-    
+        case  STMT_COND : print_stmt_if(fp, rec->info.cond, level);
+                           break;
     }
-    fprintf(fp, "\n");
 }
 
 void print_stmt_assign(FILE *fp, Assign rec, int level){
     
     fprintf(fp, "%s%s := ",sp(level), rec.asg_id);
     print_expr(fp, rec.asg_expr, level);
-    fprintf(fp, "%s", ";");
+    fprintf(fp, "%s\n", ";");
 
 }
 
@@ -176,6 +177,19 @@ void print_stmt_while(FILE *fp, While rec, int level){
     print_statements(fp, rec.body, level +1 );
     fprintf(fp, "%send\n",sp(level)); //TODO: fix this
 }
+
+void print_stmt_if(FILE *fp, Cond rec, int level){
+    fprintf(fp, "%sif ", sp(level));
+    fprintf(fp, "--TODOEXPR--  %s \n", "then");
+    print_statements(fp, rec.then_branch, level +1 );
+    if (rec.else_branch != NULL){
+        fprintf(fp, "%selse\n", sp(level));
+        print_statements(fp, rec.else_branch, level +1 );
+    }
+    fprintf(fp, "%sfi\n",sp(level)); //TODO: fix this
+
+}
+
 
 void print_expr(FILE *fp, Expr *rec, int level){
     switch (rec->kind){
