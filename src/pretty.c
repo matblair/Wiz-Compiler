@@ -221,7 +221,7 @@ void print_expr_binop(FILE *fp, BinOp op, Expr *e1, Expr *e2){
 
 void print_expr(FILE *fp, Expr *rec){
     switch (rec->kind){
-        case EXPR_ID :    fprintf(fp, rec->id);
+        case EXPR_ID :    fprintf(fp,"%s", rec->id);
                           break;
         case EXPR_CONST : print_expr_const(fp, rec->constant);
                           break;

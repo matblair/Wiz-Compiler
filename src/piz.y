@@ -435,6 +435,7 @@ expr
           $$->kind = EXPR_CONST;
           $$->constant.val.bool_val = FALSE;
           $$->constant.type = BOOL_TYPE;
+          $$->constant.raw = "false";
           $$->e1 = NULL;
           $$->e2 = NULL;
         }
@@ -446,6 +447,7 @@ expr
           $$->kind = EXPR_CONST;
           $$->constant.val.bool_val = TRUE;
           $$->constant.type = BOOL_TYPE;
+          $$->constant.raw = "true";
           $$->e1 = NULL;
           $$->e2 = NULL;
         }
