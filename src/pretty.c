@@ -10,6 +10,7 @@
 #include "ast.h"
 
 #define token_terminator ";"
+#define TAB_SPACE  4
 
 extern void report_error_and_exit(const char *msg);
 
@@ -66,11 +67,10 @@ void print_procs(FILE *fp, Procs *rec, int level){
 }
 
 void print_proc(FILE *fp, Proc *rec, int level){
-    fprintf(fp, "\n");
     print_procdef(fp , rec->proc_def, level);
     print_declarations(fp , rec->decls, level+1);
     print_statements(fp, rec->body, level+1);
-    fprintf(fp,"%s", "end");
+    fprintf(fp,"%s\n\n", "end");
 }
 
 void print_procdef(FILE *fp, ProcDef *rec, int level){
@@ -193,7 +193,7 @@ void print_expr_const(FILE *fp, Constant rec, int level){
 
 char * sp(int numberOfTabs){
     int i;
-    char * space = malloc(sizeof (char) * numberOfTabs + 1);
+    char * space = malloc(sizeof (char) * ( TAB_SPACE)  *( numberOfTabs) + 1);
     for( i=0; i<numberOfTabs; i++)
       space[i]='\t';
     space[i]='\0';
