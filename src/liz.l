@@ -9,6 +9,9 @@ NUM     -?[0-9]+
 ID      [a-zA-Z_][A-Za-z_0-9]*
 nl      [\n\f]
 nonl    [^\n\f]
+FLOAT   -?[0-9]*\.[0-9]+
+dim     [0-9]+\.\.[0-9]+
+STRING  \"\"
 %{
 
 #include <stdlib.h>
@@ -52,13 +55,33 @@ end             { yylval.str_val = (char *) strdup(yytext); return END_TOKEN; }
                   yylval.const_val->val.int_val = atoi(yytext); 
                   yylval.const_val->raw = (char *) strdup(yytext); 
                   return NUMBER_TOKEN; 
-                  
                 }
 
+{FLOAT}          { yylval.const_val =  allocate(sizeof ( Constant)) ;
+                  yylval.const_val->val.float_val = atof(yytext); 
+                  yylval.const_val->raw = (char *) strdup(yytext); 
+                  return FLOATNUM_TOKEN; 
+                }
+
+{STRING}        { yylval.const_val =  allocate(sizeof ( Constant)) ;
+                  yylval.const_val->raw = (char *) strdup(yytext); 
+                  return STRING_TOKEN; 
+                }
+{dim}           {
+                  char * cp_yytext, *pos_sep ;
+                  yylval.dim_val= allocate(sizeof (Dimension));
+                  pos_sep = strstr(yytext, "..");
+                  yylval.dim_val->ub= atoi (pos_sep+2);
+                  cp_yytext = strdup(yytext);
+                  strncpy(cp_yytext, yytext, (strlen( yytext) -
+                  strlen(pos_sep)));
+                  yylval.dim_val->lb= atoi (cp_yytext);
+                  return DIM_TOKEN;
+                }
 
 {ID}            { yylval.str_val = (char *) strdup(yytext); return IDENT_TOKEN; }
 
-[-+*;(),]        { return yytext[0]; }         /* single character tokens */
+[-+*;(),/]        { return yytext[0]; }         /* single character tokens */
 [\[]             { return yytext[0]; }         /* single character tokens */
 [\]]             { return yytext[0]; }         /* single character tokens */
 [\.]             { return yytext[0]; }         /* single character tokens */

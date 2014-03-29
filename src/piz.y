@@ -51,7 +51,7 @@ BOOL has_parse_error ;
 
 }
 
-%token '(' ')' ';' ',' '[' ']' '.'
+%token '(' ')' ';' ',' '[' ']' '.' '/'
 %token ASSIGN_TOKEN 
 %token DO_TOKEN   
 %token ELSE_TOKEN 
@@ -70,10 +70,14 @@ BOOL has_parse_error ;
 %token INVALID_TOKEN
 %token VAL_TOKEN
 %token REF_TOKEN
+%token <const_val> STRING_TOKEN
 %token <const_val> NUMBER_TOKEN
 %token <str_val> IDENT_TOKEN
+%token <const_val> FLOATNUM_TOKEN
+%token <dim_val> DIM_TOKEN
 %token PROC_TOKEN
 %token END_TOKEN
+
 /* Standard operator precedence */
 
 %left '+' '-' 
@@ -90,7 +94,6 @@ BOOL has_parse_error ;
 %type <decls_val> declarations
 %type <decl_val>  decl
 %type <datatype_val> datatype
-%type <dim_val> dim
 %type <dims_val> dims
 %type <stmts_val> statements 
 %type <stmt_val>  stmt
@@ -253,13 +256,13 @@ decl
     ;
 
 dims 
-    :  dim ',' dims
+    :  DIM_TOKEN ',' dims
         {
            $$ = allocate(sizeof (struct dimensions));
            $$->first= $1;
            $$->rest = $3;
         }
-    | dim
+    |  DIM_TOKEN
         {
           $$ = allocate(sizeof (struct dimensions));
           $$->first = $1;
@@ -267,14 +270,6 @@ dims
         }
     ;
 
-dim
-    : NUMBER_TOKEN '.' '.' NUMBER_TOKEN
-        {
-          $$ = allocate(sizeof (struct dimension));
-          $$->lb = $1->val.int_val;
-          $$->ub = $4->val.int_val;
-        }
-    ;
 get_lineno
     : /* empty */
         { $$ = ln; }
@@ -417,6 +412,16 @@ expr
           $$->lineno = $1->lineno == $4->lineno ? $1->lineno : $3;
         }
 
+    | expr '/' get_lineno expr
+        {
+          $$ = allocate(sizeof(struct expr));
+          $$->kind = EXPR_BINOP;
+          $$->binop = BINOP_DIV;
+          $$->e1 = $1;
+          $$->e2 = $4;
+          $$->lineno = $1->lineno == $4->lineno ? $1->lineno : $3;
+        }
+    
     | '(' expr ')'
         { $$ = $2; }
 
@@ -465,7 +470,18 @@ expr
           $$->e1 = NULL;
           $$->e2 = NULL;
         }
+     | FLOATNUM_TOKEN
+        {
+          $$ = allocate(sizeof(struct expr));
+          $$->lineno = ln;
+          $$->kind = EXPR_CONST;
+          $$->constant = *$1;
+          $$->constant.type = FLOAT_TYPE;
+          $$->e1 = NULL;
+          $$->e2 = NULL;
+        }
     ;
+
 
 bool_expr
     : TRUE_TOKEN

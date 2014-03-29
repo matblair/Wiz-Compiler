@@ -18,8 +18,8 @@ void print_stmt_while(FILE *fp, While rec, int level);
 void print_stmt_if(FILE *fp, Cond rec, int level);
 void print_statement(FILE *fp, Stmt *rec, int level);
 void print_stmt_assign(FILE *fp, Assign rec, int level);
-void print_expr(FILE *fp, Expr *rec,int level);
-void print_expr_const(FILE *fp, Constant rec,int level);
+void print_expr(FILE *fp, Expr *rec);
+void print_expr_const(FILE *fp, Constant rec);
 void print_proc(FILE *fp, Proc *proc, int level);
 void print_procs(FILE *fp, Procs *procs, int level);
 void print_procdef(FILE *fp, ProcDef *rec, int level);
@@ -166,7 +166,7 @@ void print_statement(FILE *fp, Stmt *rec, int level){
 void print_stmt_assign(FILE *fp, Assign rec, int level){
     
     fprintf(fp, "%s%s := ",sp(level), rec.asg_id);
-    print_expr(fp, rec.asg_expr, level);
+    print_expr(fp, rec.asg_expr);
     fprintf(fp, "%s\n", ";");
 
 }
@@ -190,16 +190,48 @@ void print_stmt_if(FILE *fp, Cond rec, int level){
 
 }
 
+void print_expr_binop(FILE *fp, BinOp op, Expr *e1, Expr *e2){
+   switch(op){
+       case BINOP_ADD : fprintf(fp, "(");
+                        print_expr(fp, e1);
+                        fprintf(fp, "+");
+                        print_expr(fp, e2);
+                        fprintf(fp, ")");
+                        break;
+       case BINOP_DIV : fprintf(fp, "(");
+                        print_expr(fp, e1);
+                        fprintf(fp, "/");
+                        print_expr(fp, e2);
+                        fprintf(fp, ")");
+                        break;
+       case BINOP_MUL : fprintf(fp, "(");
+                        print_expr(fp, e1);
+                        fprintf(fp, "*");
+                        print_expr(fp, e2);
+                        fprintf(fp, ")");
+                        break;
+       case BINOP_SUB : fprintf(fp, "(");
+                        print_expr(fp, e1);
+                        fprintf(fp, "/");
+                        print_expr(fp, e2);
+                        fprintf(fp, ")");
+                        break;
+   }
+}
 
-void print_expr(FILE *fp, Expr *rec, int level){
+void print_expr(FILE *fp, Expr *rec){
     switch (rec->kind){
-        case EXPR_CONST : print_expr_const(fp, rec->constant, level);
+        case EXPR_ID :    fprintf(fp, rec->id);
+                          break;
+        case EXPR_CONST : print_expr_const(fp, rec->constant);
+                          break;
+        case EXPR_BINOP : print_expr_binop(fp, rec->binop, rec->e1, rec->e2);
                           break;
 
     }
 }
 
-void print_expr_const(FILE *fp, Constant rec, int level){
+void print_expr_const(FILE *fp, Constant rec){
     fprintf(fp, "%s", rec.raw);
 }
 
