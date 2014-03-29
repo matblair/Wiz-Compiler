@@ -10,6 +10,6 @@
 
 /* The pretty-printer will need to know how to print operators: */
 
-const char  *binopname[] = { BINOP_NAMES };
-const char  *unopname[]  = { UNOP_NAMES };
+//const char  *binopname[] = { BINOP_NAMES };
+//const char  *unopname[]  = { UNOP_NAMES };
 
