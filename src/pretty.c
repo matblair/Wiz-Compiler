@@ -7,7 +7,8 @@
 
 //includes
 #include <stdio.h>
-#include <cstring.h>
+#include <stdlib.h>
+#include <string.h>
 #include "ast.h"
 #include "std.h"
 
@@ -17,7 +18,7 @@
 extern void report_error_and_exit(const char *msg);
 
 void sort_procs(Procs *);
-int proc_compar(void *, void *);
+int proc_compar(const void *, const void *);
 void print_program(FILE *, Program *);
 void print_proc(FILE *, Proc *);
 void print_header(FILE *, Proc *);
@@ -52,7 +53,7 @@ void sort_procs(Procs *proc_list) {
         p = p->rest;
     }
     //create array for storing Proc structs
-    proc_array = malloc(sizeof(Proc) * num_procs);
+    proc_array = (Proc **)malloc(sizeof(Proc *) * num_procs);
     p = proc_list;
     for (int i=0 ; i<num_procs ; i++)
     {
@@ -61,24 +62,26 @@ void sort_procs(Procs *proc_list) {
     }
     qsort(proc_array, num_procs, sizeof(Proc*), proc_compar);
     //now sort the Proc elements in proc_list
-    p = proc_list
+    p = proc_list;
     for (int i=0 ; i<num_procs ; i++)
     {
         p->first = proc_array[i];
         p = p->rest;
     }
     //free memory used for array
-    free(proc_array):
+    free(proc_array);
 }
 
-int proc_compar(void *p1, void *p2) {
-    return strcmp(((Proc*)p1)->proc_name, ((Proc*)p2)->proc_name);
+int proc_compar(const void *p1, const void *p2) {
+    Proc *proc1 = * (Proc **) p1;
+    Proc *proc2 = * (Proc **) p2;
+    return strcmp(proc1->proc_name, proc2->proc_name);
 }
 
 void print_program(FILE *fp, Program *prog) {
     
     Procs *p = prog->proc_list;
-    Proc next_proc;
+    Proc *next_proc;
     //sort the procs 
     sort_procs(p);
     while (TRUE) {
@@ -91,14 +94,19 @@ void print_program(FILE *fp, Program *prog) {
 }
 
 void print_proc(FILE *fp, Proc *proc) {
+    //print function header
     print_header(fp, proc);
+    //print declarations
     print_declarations(fp, proc->decls);
     fprintf(fp, "\n");
+    //print statements with one space gap
     print_statements(fp, proc->body, 1);
+    //print "end" keyword
+    fprintf(fp, "end\n");
 }
 
 void print_header(FILE *fp, Proc *proc) {
-    Args a = proc->args;
+    Args *a = proc->args;
     fprintf(fp, "proc %s (", proc->proc_name);
     //print out string of arguments
     while (a != NULL) {
@@ -108,7 +116,7 @@ void print_header(FILE *fp, Proc *proc) {
         //if not the last arg print a comma
         a = a->rest;
         if (a != NULL) {
-            fprintf(fp, ", "):
+            fprintf(fp, ", ");
         }
     }
     //print final paren
@@ -150,8 +158,25 @@ void print_declarations(FILE *fp, Decls *declarations) {
     Decl *decl = declarations->first;
     print_indent(fp, 1);
     print_type(fp, decl->type);
-    fprintf(fp, "%s;\n", decl->id);
+    fprintf(fp, "%s", decl->id);
+    //if it is an array, need to print array-bounds intervals
+    if (decl->array_bounds != NULL) {
+        Bounds *b = decl->array_bounds;
+        fprintf(fp, "[");
+        while (b != NULL) {
+            fprintf(fp, "%d..%d", b->interval_start, b->interval_end);
+            b = b->rest;
+            //if there are more to print, separate with comma
+            if (b != NULL) {
+                fprintf(fp, ",");
+            }
+        }
+        fprintf(fp, "]");
+    }
+    //end with semi-colon and nl
+    fprintf(fp, ";\n");
 
+    //print the rest of declarations
     print_declarations(fp, declarations->rest);
 }
 
@@ -166,8 +191,8 @@ void print_statements(FILE *fp, Stmts *statements, int indent) {
         return;
     }
 
-    print_statement(FILE *fp, statements->first, indent);
-    print_statements(FILE *fp, statements->rest, indent);
+    print_statement(fp, statements->first, indent);
+    print_statements(fp, statements->rest, indent);
 }
 
 void print_statement(FILE *fp, Stmt *statement, int indent) {
@@ -208,7 +233,7 @@ void print_statement(FILE *fp, Stmt *statement, int indent) {
             break;
         case STMT_READ:
             print_indent(fp, indent);
-            fprintf(fp, "read %s\n;", statement->info.read);
+            fprintf(fp, "read %s;\n", statement->info.read);
             break;
         case STMT_WHILE:
             print_indent(fp, indent);
@@ -234,7 +259,7 @@ void print_statement(FILE *fp, Stmt *statement, int indent) {
             //print the identifier and open paren
             fprintf(fp, "%s(", statement->info.proc.proc_name);
             //recursively print arguments
-            ExprList e = statement->info.proc.proc_args;
+            ExprList *e = statement->info.proc.proc_args;
             while (e != NULL) {
                 print_expression(fp, e->first);
                 e = e->rest;
@@ -279,34 +304,46 @@ void print_expression(FILE *fp, Expr *expr) {
                 print_expression(fp, expr->e1);
                 fprintf(fp, ")");
             } else {
-                print_expression(fp, expr->e1):
+                print_expression(fp, expr->e1);
             }
             //print the binary operation
             switch (expr->binop) {
                 case BINOP_ADD:
                     fprintf(fp, " + ");
+                    break;
                 case BINOP_SUB:
                     fprintf(fp, " - ");
+                    break;
                 case BINOP_MUL:
                     fprintf(fp, " * ");
+                    break;
                 case BINOP_DIV:
                     fprintf(fp, " / ");
+                    break;
                 case BINOP_LT:
                     fprintf(fp, " < ");
+                    break;
                 case BINOP_GT:
                     fprintf(fp, " > ");
+                    break;
                 case BINOP_LTEQ:
                     fprintf(fp, " <= ");
+                    break;
                 case BINOP_GTEQ:
                     fprintf(fp, " >= ");
+                    break;
                 case BINOP_NOTEQ:
                     fprintf(fp, " != ");
+                    break;
                 case BINOP_EQ:
                     fprintf(fp, " = ");
+                    break;
                 case BINOP_OR:
                     fprintf(fp, " or ");
+                    break;
                 case BINOP_AND:
                     fprintf(fp, " and ");
+                    break;
             }
             //decide whether right sub-expression needs parens
             if (check_parens(expr->e2, (void*)expr->binop, expr->kind)) {
@@ -314,7 +351,7 @@ void print_expression(FILE *fp, Expr *expr) {
                 print_expression(fp, expr->e2);
                 fprintf(fp, ")");
             } else {
-                print_expression(fp, expr->e2):
+                print_expression(fp, expr->e2);
             }
             break;
         case EXPR_UNOP:
@@ -336,7 +373,7 @@ void print_expression(FILE *fp, Expr *expr) {
             //print the array identifier
             fprintf(fp, "%s[", expr->id);
             //fill in the arguments
-            e = expr->el;
+            ExprList *e = expr->el;
             while (e != NULL) {
                 print_expression(fp, e->first);
                 //if not at end of list print separating comma
@@ -357,10 +394,10 @@ BOOL check_parens(Expr *inside_expr, void *op, ExprKind kind) {
     void *inside_op;
     switch (inside_kind) {
         case EXPR_BINOP:
-            inside_op = inside_expr->binop;
+            inside_op = (void*)inside_expr->binop;
             break;
         case EXPR_UNOP:
-            inside_op = inside_expr->unop;
+            inside_op = (void*)inside_expr->unop;
             break;
         default:
             return FALSE; /* in default case need no parens */

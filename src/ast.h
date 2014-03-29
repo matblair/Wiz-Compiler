@@ -16,6 +16,7 @@ typedef enum {
 
 typedef struct decl   Decl;
 typedef struct decls  Decls;
+typedef struct bounds Bounds;
 typedef struct exprs  ExprList;
 typedef struct expr   Expr;
 typedef struct stmts  Stmts;
@@ -84,11 +85,18 @@ struct decl {
     int       lineno;
     char      *id;
     Type      type;
+    Bounds    *array_bounds;
 };
 
 struct decls {
     Decl      *first;
     Decls     *rest;
+};
+
+struct bounds {
+    int       interval_start;
+    int       interval_end;
+    Bounds    *rest;
 };
 
 typedef enum {

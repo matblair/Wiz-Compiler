@@ -6,7 +6,7 @@
 -----------------------------------------------------------------------*/
 
 INT     [0-9]+
-FLOAT   {NUM}.[0-9]+
+FLOAT   {INT}.[0-9]+
 ID      [a-zA-Z_][A-Za-z_0-9]*
 nl      [\n\f]
 nonl    [^\n\f]
@@ -58,12 +58,13 @@ ref             { return REF_TOKEN; }
 
 {ID}            { yylval.str_val = (char *) strdup(yytext); return IDENT_TOKEN; }
 
-[-+/*;()\[\]<>=]        { return yytext[0]; }         /* single character tokens */
+[-+/*;()\[\]<>=,]        { return yytext[0]; }         /* single character tokens */
 
 ":="            { return ASSIGN_TOKEN; }
 "!="            { return NOTEQ_TOKEN; }
 "<="            { return LTEQ_TOKEN; }
 ">="            { return GTEQ_TOKEN; }
+".."            { return DOTDOT_TOKEN; }
 
 "#"{nonl}*{nl}  { ln++; }
 

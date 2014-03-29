@@ -28,8 +28,9 @@ void *allocate(int size);
     char        *str_val;
     Decl        *decl_val;
     Decls       *decls_val;
+    Bounds      *bounds_val;
     Expr        *expr_val;
-    ExprList    *expr_val_list;
+    ExprList    *exprl_val;
     Stmts       *stmts_val;
     Stmt        *stmt_val;
     Program     *prog_val;
@@ -37,9 +38,10 @@ void *allocate(int size);
     Procs       *procs_val;
     Args        *args_val;
     Arg         *arg_val;
+    int         int_val;
 }
 
-%token '(' ')' ';' '[' ']'
+%token '(' ')' ';' '[' ']' ','
 %token ASSIGN_TOKEN 
 %token DO_TOKEN   
 %token ELSE_TOKEN 
@@ -66,6 +68,7 @@ void *allocate(int size);
 %token NOTEQ_TOKEN
 %token LTEQ_TOKEN
 %token GTEQ_TOKEN
+%token DOTDOT_TOKEN
 
 %token <str_val> INT_NUMBER_TOKEN
 %token <str_val> FLOAT_NUMBER_TOKEN
@@ -80,8 +83,6 @@ void *allocate(int size);
 %left '+' '-' 
 %left '*' '/'
 %left UNARY_MINUS
-%nonassoc INDIRECT_IDENT_DERIVATION
-%nonassoc DIRECT_IDENT_DERIVATION
 
 %type <prog_val>    program
 %type <procs_val>   procedures
@@ -92,11 +93,13 @@ void *allocate(int size);
 
 %type <decls_val>   declarations
 %type <decl_val>    decl
+%type <bounds_val>  array_bounds
+%type <bounds_val>  interval_list
+
 %type <stmts_val>   statements 
 %type <stmt_val>    stmt
 %type <expr_val>    expr 
-%type <expr_val>    bool_expr 
-%type <expr_val>    num_expr
+%type <expr_val>    array_expr
 %type <exprl_val>   expr_list
 
 %type <int_val>     assign
@@ -140,7 +143,7 @@ procedure
             $$->body = $5;
         }
 
-    | error END_TOKEN { yerrok; } proc
+    | error END_TOKEN { yyerrok; } procedure
         { 
             $$ = $4;
         }
@@ -151,7 +154,7 @@ argument_list
         {
             $$ = allocate(sizeof(struct args));
             $$->first = $2;
-            $$->rest = $3
+            $$->rest = $3;
         }
     | '(' ')'
         { $$ = NULL }   /* empty header */
@@ -174,42 +177,42 @@ arg
             $$ = allocate(sizeof(struct arg));
             $$->pp = PP_VAL;
             $$->type = INT_TYPE;
-            $$->name = $3;
+            $$->arg_name = $3;
         }
     | REF_TOKEN INT_TOKEN IDENT_TOKEN
         {
             $$ = allocate(sizeof(struct arg));
             $$->pp = PP_REF;
             $$->type = INT_TYPE;
-            $$->name = $3;
+            $$->arg_name = $3;
         }
     | VAL_TOKEN FLOAT_TOKEN IDENT_TOKEN
         {
             $$ = allocate(sizeof(struct arg));
             $$->pp = PP_VAL;
             $$->type = FLOAT_TYPE;
-            $$->name = $3;
+            $$->arg_name = $3;
         }
     | REF_TOKEN FLOAT_TOKEN IDENT_TOKEN
         {
             $$ = allocate(sizeof(struct arg));
             $$->pp = PP_REF;
             $$->type = FLOAT_TYPE;
-            $$->name = $3;
+            $$->arg_name = $3;
         }
     | VAL_TOKEN BOOL_TOKEN IDENT_TOKEN
         {
             $$ = allocate(sizeof(struct arg));
             $$->pp = PP_VAL;
             $$->type = BOOL_TYPE;
-            $$->name = $3;
+            $$->arg_name = $3;
         }
     | REF_TOKEN BOOL_TOKEN IDENT_TOKEN
         {
             $$ = allocate(sizeof(struct arg));
             $$->pp = PP_REF;
             $$->type = BOOL_TYPE;
-            $$->name = $3;
+            $$->arg_name = $3;
         }
     ;
 
@@ -226,21 +229,59 @@ declarations
     ;
         
 decl
-    : INT_TOKEN IDENT_TOKEN ';'
+    : INT_TOKEN IDENT_TOKEN array_bounds ';'
         {
           $$ = allocate(sizeof(struct decl));
           $$->lineno = ln;
           $$->id = $2;
           $$->type = INT_TYPE;
+          $$->array_bounds = $3;
         }
 
-    | BOOL_TOKEN IDENT_TOKEN ';'
+    | BOOL_TOKEN IDENT_TOKEN array_bounds ';'
         {
           $$ = allocate(sizeof(struct decl));
           $$->lineno = ln;
           $$->id = $2;
           $$->type = BOOL_TYPE;
+          $$->array_bounds = $3;
         }
+
+    | FLOAT_TOKEN IDENT_TOKEN array_bounds ';'
+        {
+          $$ = allocate(sizeof(struct decl));
+          $$->lineno = ln;
+          $$->id = $2;
+          $$->type = FLOAT_TYPE;
+          $$->array_bounds = $3;
+        }
+    ;
+
+array_bounds
+    : '[' INT_NUMBER_TOKEN DOTDOT_TOKEN INT_NUMBER_TOKEN interval_list ']'
+        /* an array containing at least one interval bounds */
+        { 
+          $$ = allocate(sizeof(struct bounds));
+          $$->interval_start = atoi($2);
+          $$->interval_end = atoi($4);
+          $$->rest = $5;
+        }
+   
+    | 
+        { $$ = NULL; } /* empty interval list (i.e. not an array) */
+    ;
+
+interval_list
+    : ',' INT_NUMBER_TOKEN DOTDOT_TOKEN INT_NUMBER_TOKEN interval_list
+        /* non empty case */
+        {
+          $$ = allocate(sizeof(struct bounds));
+          $$->interval_start = atoi($2);
+          $$->interval_end = atoi($4);
+          $$->rest = $5;
+        }
+    |
+        { $$ = NULL; } /* empty case (at end of list) */
     ;
 
 get_lineno
@@ -338,7 +379,7 @@ stmt
             $$->info.proc.proc_args = NULL;
         }
 
-    | start_cond bool_expr THEN_TOKEN statements FI_TOKEN 
+    | start_cond expr THEN_TOKEN statements FI_TOKEN 
         {
           $$ = allocate(sizeof(struct stmt));
           $$->lineno = $1;
@@ -348,7 +389,7 @@ stmt
           $$->info.cond.else_branch = NULL;
         }
 
-    | start_cond bool_expr THEN_TOKEN statements ELSE_TOKEN statements FI_TOKEN
+    | start_cond expr THEN_TOKEN statements ELSE_TOKEN statements FI_TOKEN
         {
           $$ = allocate(sizeof(struct stmt));
           $$->lineno = $1;
@@ -358,7 +399,7 @@ stmt
           $$->info.cond.else_branch = $6;
         }
 
-    | start_while bool_expr DO_TOKEN statements OD_TOKEN
+    | start_while expr DO_TOKEN statements OD_TOKEN
         {
           $$ = allocate(sizeof(struct stmt));
           $$->lineno = $1;
@@ -375,13 +416,7 @@ expr
     | '(' error ')'
         { $$ = NULL; }
 
-    | binop_expr
-        { $$ = $1; }
-
-    | num_expr
-        { $$ = $1; }
-
-    | IDENT_TOKEN            %prec DIRECT_IDENT_DERIVATION
+    | IDENT_TOKEN            
         { 
           $$ = allocate(sizeof(struct expr));
           $$->lineno = ln;
@@ -390,10 +425,193 @@ expr
           $$->e1 = NULL;
           $$->e2 = NULL;
         }
-    | array_expr
+
+    | '-' get_lineno expr                             %prec UNARY_MINUS
         {
-            $$ = $1;
+          $$ = allocate(sizeof(struct expr));
+          $$->kind = EXPR_UNOP;
+          $$->unop = UNOP_MINUS;
+          $$->e1 = $3;
+          $$->e2 = NULL;
+          $$->lineno = $2;
         }
+
+    | expr '+' get_lineno expr
+        {
+          $$ = allocate(sizeof(struct expr));
+          $$->kind = EXPR_BINOP;
+          $$->binop = BINOP_ADD;
+          $$->e1 = $1;
+          $$->e2 = $4;
+          $$->lineno = $1->lineno == $4->lineno ? $1->lineno : $3;
+        }
+
+    | expr '-' get_lineno expr
+        {
+          $$ = allocate(sizeof(struct expr));
+          $$->kind = EXPR_BINOP;
+          $$->binop = BINOP_SUB;
+          $$->e1 = $1;
+          $$->e2 = $4;
+          $$->lineno = $1->lineno == $4->lineno ? $1->lineno : $3;
+        }
+
+    | expr '*' get_lineno expr
+        {
+          $$ = allocate(sizeof(struct expr));
+          $$->kind = EXPR_BINOP;
+          $$->binop = BINOP_MUL;
+          $$->e1 = $1;
+          $$->e2 = $4;
+          $$->lineno = $1->lineno == $4->lineno ? $1->lineno : $3;
+        }
+
+    | expr '/' get_lineno expr
+        {
+          $$ = allocate(sizeof(struct expr));
+          $$->kind = EXPR_BINOP;
+          $$->binop = BINOP_DIV;
+          $$->e1 = $1;
+          $$->e2 = $4;
+          $$->lineno = $1->lineno == $4->lineno ? $1->lineno : $3;
+        }
+
+    | FLOAT_NUMBER_TOKEN
+        {
+          $$ = allocate(sizeof(struct expr));
+          $$->lineno = ln;
+          $$->kind = EXPR_CONST;
+          $$->constant.val.float_val = atof($1);
+          $$->constant.type = FLOAT_TYPE;
+          $$->e1 = NULL;
+          $$->e2 = NULL;
+       }
+
+    | INT_NUMBER_TOKEN
+        {
+          $$ = allocate(sizeof(struct expr));
+          $$->lineno = ln;
+          $$->kind = EXPR_CONST;
+          $$->constant.val.int_val = atoi($1);
+          $$->constant.type = INT_TYPE;
+          $$->e1 = NULL;
+          $$->e2 = NULL;
+        }
+
+    | TRUE_TOKEN
+        {
+          $$ = allocate(sizeof(struct expr));
+          $$->lineno = ln;
+          $$->kind = EXPR_CONST;
+          $$->constant.val.bool_val = TRUE;
+          $$->constant.type = BOOL_TYPE;
+          $$->e1 = NULL;
+          $$->e2 = NULL;
+        }
+
+    | FALSE_TOKEN
+        {
+          $$ = allocate(sizeof(struct expr));
+          $$->lineno = ln;
+          $$->kind = EXPR_CONST;
+          $$->constant.val.bool_val = FALSE;
+          $$->constant.type = BOOL_TYPE;
+          $$->e1 = NULL;
+          $$->e2 = NULL;
+        }
+
+    | expr '<' get_lineno expr
+        {
+          $$ = allocate(sizeof(struct expr));
+          $$->kind = EXPR_BINOP;
+          $$->binop = BINOP_LT;
+          $$->e1 = $1;
+          $$->e2 = $4;
+          $$->lineno = $1->lineno == $4->lineno ? $1->lineno : $3;
+        }
+
+    | expr '>' get_lineno expr
+        {
+          $$ = allocate(sizeof(struct expr));
+          $$->kind = EXPR_BINOP;
+          $$->binop = BINOP_GT;
+          $$->e1 = $1;
+          $$->e2 = $4;   
+          $$->lineno = $1->lineno == $4->lineno ? $1->lineno : $3;
+        }
+
+    | expr LTEQ_TOKEN get_lineno expr
+        {
+          $$ = allocate(sizeof(struct expr));
+          $$->kind = EXPR_BINOP;
+          $$->binop = BINOP_LTEQ;
+          $$->e1 = $1;
+          $$->e2 = $4;
+          $$->lineno = $1->lineno == $4->lineno ? $1->lineno : $3;
+        }
+
+    | expr GTEQ_TOKEN get_lineno expr
+        {
+          $$ = allocate(sizeof(struct expr));
+          $$->kind = EXPR_BINOP;
+          $$->binop = BINOP_GTEQ;
+          $$->e1 = $1;
+          $$->e2 = $4;
+          $$->lineno = $1->lineno == $4->lineno ? $1->lineno : $3;
+        }
+
+    | expr NOTEQ_TOKEN get_lineno expr
+        {
+          $$ = allocate(sizeof(struct expr));
+          $$->kind = EXPR_BINOP;
+          $$->binop = BINOP_NOTEQ;
+          $$->e1 = $1;
+          $$->e2 = $4;
+          $$->lineno = $1->lineno == $4->lineno ? $1->lineno : $3;
+        }
+
+    | expr '=' get_lineno expr
+        {
+          $$ = allocate(sizeof(struct expr));
+          $$->kind = EXPR_BINOP;
+          $$->binop = BINOP_EQ;
+          $$->e1 = $1;
+          $$->e2 = $4;
+          $$->lineno = $1->lineno == $4->lineno ? $1->lineno : $3;
+        }
+
+    | expr OR_TOKEN get_lineno expr
+        {
+          $$ = allocate(sizeof(struct expr));
+          $$->kind = EXPR_BINOP;
+          $$->binop = BINOP_OR;
+          $$->e1 = $1;
+          $$->e2 = $4;
+          $$->lineno = $1->lineno == $4->lineno ? $1->lineno : $3;
+        }
+
+    | expr AND_TOKEN get_lineno expr
+        {
+          $$ = allocate(sizeof(struct expr));
+          $$->kind = EXPR_BINOP;
+          $$->binop = BINOP_AND;
+          $$->e1 = $1;
+          $$->e2 = $4;
+          $$->lineno = $1->lineno == $4->lineno ? $1->lineno : $3;
+        }
+
+    | NOT_TOKEN get_lineno expr 
+        {
+          $$ = allocate(sizeof(struct expr));
+          $$->lineno = ln;
+          $$->kind = EXPR_UNOP;
+          $$->unop = UNOP_NOT;
+          $$->e1 = $3;
+          $$->e2 = NULL;
+        }
+
+    | array_expr 
+        { $$ = $1 }
     ;
 
 array_expr
@@ -422,225 +640,6 @@ expr_list
         }
     ;
 
-num_expr
-    : '-' get_lineno num_expr                             %prec UNARY_MINUS
-        {
-          $$ = allocate(sizeof(struct expr));
-          $$->kind = EXPR_UNOP;
-          $$->unop = UNOP_MINUS;
-          $$->e1 = $3;
-          $$->e2 = NULL;
-          $$->lineno = $2;
-        }
-
-    | num_expr '+' get_lineno num_expr
-        {
-          $$ = allocate(sizeof(struct expr));
-          $$->kind = EXPR_BINOP;
-          $$->binop = BINOP_ADD;
-          $$->e1 = $1;
-          $$->e2 = $4;
-          $$->lineno = $1->lineno == $4->lineno ? $1->lineno : $3;
-        }
-
-    | num_expr '-' get_lineno num_expr
-        {
-          $$ = allocate(sizeof(struct expr));
-          $$->kind = EXPR_BINOP;
-          $$->binop = BINOP_SUB;
-          $$->e1 = $1;
-          $$->e2 = $4;
-          $$->lineno = $1->lineno == $4->lineno ? $1->lineno : $3;
-        }
-
-    | num_expr '*' get_lineno num_expr
-        {
-          $$ = allocate(sizeof(struct expr));
-          $$->kind = EXPR_BINOP;
-          $$->binop = BINOP_MUL;
-          $$->e1 = $1;
-          $$->e2 = $4;
-          $$->lineno = $1->lineno == $4->lineno ? $1->lineno : $3;
-        }
-
-    | num_expr '/' get_lineno num_expr
-        {
-          $$ = allocate(sizeof(struct expr));
-          $$->kind = EXPR_BINOP;
-          $$->binop = BINOP_DIV;
-          $$->e1 = $1;
-          $$->e2 = $4;
-          $$->lineno = $1->lineno == $4->lineno ? $1->lineno : $3;
-        }
-
-    | '(' num_expr ')'
-        { $$ = $2; }
-
-    | '(' error ')'
-        { $$ = NULL }
-
-    | INT_NUMBER_TOKEN
-        {
-          $$ = allocate(sizeof(struct expr));
-          $$->lineno = ln;
-          $$->kind = EXPR_CONST;
-          $$->constant.val.int_val = atoi($1);
-          $$->constant.type = INT_TYPE;
-          $$->e1 = NULL;
-          $$->e2 = NULL;
-        }
-
-| FLOAT_NUMBER_TOKEN
-        {
-          $$ = allocate(sizeof(struct expr));
-          $$->lineno = ln;
-          $$->kind = EXPR_CONST;
-          $$->constant.val.float_val = atof($1);
-          $$->constant.type = FLOAT_TYPE;
-          $$->e1 = NULL;
-          $$->e2 = NULL;
-        
-
-    | IDENT_TOKEN               %prec INDIRECT_IDENT_DERIVATION
-        { 
-          $$ = allocate(sizeof(struct expr));
-          $$->lineno = ln;
-          $$->kind = EXPR_ID;
-          $$->id = $1;
-          $$->e1 = NULL;
-          $$->e2 = NULL;
-        }
-    ;
-
-bool_expr
-    : TRUE_TOKEN
-        {
-          $$ = allocate(sizeof(struct expr));
-          $$->lineno = ln;
-          $$->kind = EXPR_CONST;
-          $$->constant.val.bool_val = TRUE;
-          $$->constant.type = BOOL_TYPE;
-          $$->e1 = NULL;
-          $$->e2 = NULL;
-        }
-
-    | FALSE_TOKEN
-        {
-          $$ = allocate(sizeof(struct expr));
-          $$->lineno = ln;
-          $$->kind = EXPR_CONST;
-          $$->constant.val.bool_val = FALSE;
-          $$->constant.type = BOOL_TYPE;
-          $$->e1 = NULL;
-          $$->e2 = NULL;
-        }
-
-    | '(' bool_expr ')'
-        { $$ = $2; }
-
-    | '(' error ')'
-        { $$ = NULL }
-
-    | IDENT_TOKEN               %prec INDIRECT_IDENT_DERIVATION
-        { 
-          $$ = allocate(sizeof(struct expr));
-          $$->lineno = ln;
-          $$->kind = EXPR_ID;
-          $$->id = $1;
-          $$->e1 = NULL;
-          $$->e2 = NULL;
-        }
-
-    | bool_expr '<' get_lineno bool_expr
-        {
-          $$ = allocate(sizeof(struct expr));
-          $$->kind = EXPR_BINOP;
-          $$->binop = BINOP_LT;
-          $$->eq1 = $1;
-          $$->eq2 = $4;
-          $$->lineno = $1->lineno == $4->lineno ? $1->lineno : $3;
-        }
-
-    | bool_expr '<' get_lineno bool_expr
-        {
-          $$ = allocate(sizeof(struct expr));
-          $$->kind = EXPR_BINOP;
-          $$->binop = BINOP_GT;
-          $$->eq1 = $1;
-          $$->eq2 = $4;   
-          $$->lineno = $1->lineno == $4->lineno ? $1->lineno : $3;
-        }
-
-    | bool_expr LTEQ_TOKEN get_lineno bool_expr
-        {
-          $$ = allocate(sizeof(struct expr));
-          $$->kind = EXPR_BINOP;
-          $$->binop = BINOP_LTEQ;
-          $$->eq1 = $1;
-          $$->eq2 = $4;
-          $$->lineno = $1->lineno == $4->lineno ? $1->lineno : $3;
-        }
-
-    | bool_expr GTEQ_TOKEN get_lineno bool_expr
-        {
-          $$ = allocate(sizeof(struct expr));
-          $$->kind = EXPR_BINOP;
-          $$->binop = BINOP_GTEQ;
-          $$->eq1 = $1;
-          $$->eq2 = $4;
-          $$->lineno = $1->lineno == $4->lineno ? $1->lineno : $3;
-        }
-
-    | bool_expr NOTEQ_TOKEN get_lineno bool_expr
-        {
-          $$ = allocate(sizeof(struct expr));
-          $$->kind = EXPR_BINOP;
-          $$->binop = BINOP_NOTEQ;
-          $$->eq1 = $1;
-          $$->eq2 = $4;
-          $$->lineno = $1->lineno == $4->lineno ? $1->lineno : $3;
-        }
-
-    | bool_expr '=' get_lineno bool_expr
-        {
-          $$ = allocate(sizeof(struct expr));
-          $$->kind = EXPR_BINOP;
-          $$->binop = BINOP_EQ;
-          $$->eq1 = $1;
-          $$->eq2 = $4;
-          $$->lineno = $1->lineno == $4->lineno ? $1->lineno : $3;
-        }
-
-    | bool_expr OR_TOKEN get_lineno bool_expr
-        {
-          $$ = allocate(sizeof(struct expr));
-          $$->kind = EXPR_BINOP;
-          $$->binop = BINOP_OR;
-          $$->eq1 = $1;
-          $$->eq2 = $4;
-          $$->lineno = $1->lineno == $4->lineno ? $1->lineno : $3;
-        }
-
-    | bool_expr AND_TOKEN get_lineno bool_expr
-        {
-          $$ = allocate(sizeof(struct expr));
-          $$->kind = EXPR_BINOP;
-          $$->binop = BINOP_AND;
-          $$->eq1 = $1;
-          $$->eq2 = $4;
-          $$->lineno = $1->lineno == $4->lineno ? $1->lineno : $3;
-        }
-
-    | NOT_TOKEN get_lineno bool_expr 
-        {
-          $$ = allocate(sizeof(struct expr));
-          $$->lineno = ln;
-          $$->kind = EXPR_UNOP;
-          $$->unop = UNOP_NOT;
-          $$->eq1 = $3;
-          $$->eq2 = NULL;
-        }
-    ;
 %%
 
 /*---------------------------------------------------------------------*/

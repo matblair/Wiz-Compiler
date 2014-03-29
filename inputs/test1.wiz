@@ -2,7 +2,7 @@ proc q (val float x
         , ref int   k
         )
 int n; float y;
-bool a[1..8];
+bool a[1..8, 4..9];
 a[8] := true;
 k := 42;
 end
@@ -18,9 +18,11 @@ int n;
         m := n;
         while m>0 do
             if m>0 then
-                n := n-1;
+                n := n---1;
+                if m or (n and a) then m := x   ; fi
                 m := m-1;
-                if m=0 then p(n); fi
+                if m=0 then p(n, 
+4* -((m+1))); fi
             else    m := n-m; m := m-1  ;
     fi od od
 end
