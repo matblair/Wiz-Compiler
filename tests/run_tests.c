@@ -5,6 +5,7 @@ void test_suite_program_outline(void);
 void test_suite_proc_args(void);
 void  test_suite_stmts( void );
 void  test_suite_declarations( void );
+void  test_suite_expr_bool( void );
 
 void all_tests( void )
 {
@@ -13,6 +14,7 @@ void all_tests( void )
     test_suite_proc_args();
     test_suite_declarations( );
 
+    test_suite_expr_bool(  );
     test_suite_stmts();
 	// add new test fixtures here.
 }

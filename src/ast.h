@@ -26,7 +26,7 @@ typedef struct procDef  ProcDef;
 typedef int bool;
 
 typedef enum {
-    BINOP_ADD, BINOP_SUB, BINOP_MUL, BINOP_DIV
+    BINOP_ADD, BINOP_SUB, BINOP_MUL, BINOP_DIV, BINOP_GT, BINOP_LT, BINOP_LTE, BINOP_GTE, BINOP_EQ, BINOP_NEQ, BINOP_OR, BINOP_AND
 } BinOp;
 
 #define BINOP_NAMES "+", "-", "*"

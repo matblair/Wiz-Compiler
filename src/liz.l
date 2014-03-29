@@ -48,6 +48,9 @@ while           { return WHILE_TOKEN; }
 write           { return WRITE_TOKEN; }
 val             { return VAL_TOKEN; }
 ref             { return REF_TOKEN; }
+and             { return AND_TOKEN; }
+or              { return OR_TOKEN; }
+not             { return NOT_TOKEN; }
 proc            { yylval.str_val = (char *) strdup(yytext);  return PROC_TOKEN; }
 end             { yylval.str_val = (char *) strdup(yytext); return END_TOKEN; }
 
@@ -81,10 +84,14 @@ end             { yylval.str_val = (char *) strdup(yytext); return END_TOKEN; }
 
 {ID}            { yylval.str_val = (char *) strdup(yytext); return IDENT_TOKEN; }
 
-[-+*;(),/]        { return yytext[0]; }         /* single character tokens */
+[-+*;(),/<>=]    { return yytext[0]; }         /* single character tokens */
 [\[]             { return yytext[0]; }         /* single character tokens */
 [\]]             { return yytext[0]; }         /* single character tokens */
 [\.]             { return yytext[0]; }         /* single character tokens */
+
+"!="            { return NEQ_TOKEN; }
+"<="            { return LTE_TOKEN;}
+">="            { return GTE_TOKEN; }
 
 ":="            { return ASSIGN_TOKEN; }
 
