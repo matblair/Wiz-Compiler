@@ -33,6 +33,10 @@ CC = gcc -Wall
 wiz: $(OBJ) | $(BIN)
 	$(CC) -o $(BIN)$@ $(addprefix $(BUILD), $(OBJ))
 
+wizdb :  $(addsuffix .c, $(notdir $(basename $(SRC))))	| $(BIN)
+	$(CC) -g -o $(BIN)$@ $(SRC)  $(LIBPATHS)  -I$(AUTO) -I$(SRCD) 
+
+
 run_tests: $(TESTOBJ) $(filter-out wiz.%, $(OBJ)) | $(BIN)
 	$(CC) -o $(BIN)$@ $(addprefix $(BUILD), $^)
 	$(BIN)$@

@@ -26,6 +26,7 @@ void *allocate(int size);
 int parse_string(char * inputstring);
 extern void yy_delete_buffer(YY_BUFFER_STATE);
 extern YY_BUFFER_STATE yy_scan_string(const char *string);
+extern char  linebuf[LINELEN+1] ;
 BOOL has_parse_error ;
 %}
 
@@ -85,9 +86,13 @@ BOOL has_parse_error ;
 %token END_TOKEN
 
 /* Standard operator precedence */
-
+%left OR_TOKEN
+%left AND_TOKEN
+%left '=' NEQ_TOKEN
+%left LT_TOKEN LTE_TOKEN GT_TOKEN GTE_TOKEN
 %left '+' '-' 
-%left '*'
+%left '*' '/'
+%left NOT_TOKEN
 %left UNARY_MINUS
 
 %type <prog_val>  program
@@ -116,6 +121,7 @@ BOOL has_parse_error ;
 %start program
 
 %token-table
+
 
 %%
 /*---------------------------------------------------------------------*/
@@ -388,9 +394,6 @@ expr
           $$ = $1;
 
         }
-    | '(' expr ')'
-        { $$ = $2; }
-
     | '(' error ')'
         { $$ = NULL; }
     ;
@@ -477,7 +480,7 @@ nonbool_expr
           $$->e1 = NULL;
           $$->e2 = NULL;
         }
-     | '(' expr ')'
+     | '(' nonbool_expr ')'
         {
           $$ = $2 ;
         }
@@ -612,7 +615,6 @@ bool_expr
 void 
 yyerror(const char *msg) {
     has_parse_error = 1;
-    char *linebuf = "TODO Acutal lilne";
     fprintf(stderr, "**** Input line %d, %s, near `%s': %s\n",  ln,linebuf, yytext, msg);
     return;
 }
@@ -650,10 +652,17 @@ int parse_file(FILE *fp, parserOutput *parser_output){
 
 int parse_string(char *input_string){
     int result ;
+    int str_len = strlen(input_string);
+    ln = 0;
+    char * nl_pre_inputstr = allocate(sizeof (char)* ( str_len + 2) );
+    nl_pre_inputstr[str_len+1] = '\0';
+    nl_pre_inputstr[0]='\n';
+    strncpy(nl_pre_inputstr+1, input_string, str_len);
     has_parse_error = 0;
-    YY_BUFFER_STATE buffer = yy_scan_string(input_string);
+    YY_BUFFER_STATE buffer = yy_scan_string(nl_pre_inputstr);
     result = yyparse() || has_parse_error ;
     yy_delete_buffer(buffer);
+    free(nl_pre_inputstr);
     return result;
 }
 /*---------------------------------------------------------------------*/

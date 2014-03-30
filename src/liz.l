@@ -21,13 +21,12 @@ STRING  \"\"
 #include "piz.h"
 
 #define YY_NO_UNPUT
-
 int yylex(void);
 int yywrap(void);
 
 extern int ln;
 extern void * allocate(int);
-
+char  linebuf[LINELEN+1];
 %}
 
 %%
@@ -103,6 +102,11 @@ end             { yylval.str_val = (char *) strdup(yytext); return END_TOKEN; }
 
 .               { return INVALID_TOKEN; }     /* parser may find a use for this */
 
+\n.+            {   
+                    ln++;
+                    strncpy(linebuf, yytext+1, sizeof(linebuf)-sizeof(char)); /* save the next line */
+                    yyless(1);      /* give back all but the \n to rescan */
+                }
 %%
 
 int yywrap() {

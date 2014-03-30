@@ -10,6 +10,8 @@
 
 #include "std.h"
 
+#define LINELEN 560
+
 typedef struct dimensions Dimensions;
 typedef struct dimension Dimension;
 typedef struct decl   Decl;
