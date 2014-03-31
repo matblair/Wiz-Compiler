@@ -13,6 +13,7 @@
 typedef struct decl         Decl;
 typedef struct decls        Decls;
 typedef struct expr         Expr;
+typedef struct exprs        Exprs;
 typedef struct stmts        Stmts;
 typedef struct stmt         Stmt;
 typedef struct param        Param;
@@ -23,10 +24,8 @@ typedef struct proc         Proc;
 typedef struct procs        Procs;
 typedef struct prog         Program;
 typedef struct func         Function;
-typedef struct args         Args;
-typedef struct arrayelems   ArrayElems;
-typedef struct arrayelem    ArrayElem;
-typedef struct array        Array;
+typedef struct intervals    Intervals;
+typedef struct interval     Interval;
 
 typedef enum {
     BINOP_ADD, BINOP_SUB, BINOP_MUL, BINOP_DIV, BINOP_OR, BINOP_AND,
@@ -56,12 +55,8 @@ typedef enum {
 extern const char *unopname[];
 
 typedef enum {
-    ARRAY_RANGE, ARRAY_INDEX
-} ArrayElemType;
-
-typedef enum {
     BOOL_TYPE, INT_TYPE, FLOAT_TYPE, INT_ARRAY_TYPE, 
-    FLOAT_ARRAY_TYPE, BOOL_ARRAY_TYPE
+    FLOAT_ARRAY_TYPE, BOOL_ARRAY_TYPE, STRING_CONST
 } Type;
 
 #define TYPE_NAMES "bool", "int", "float", "int", "float", "bool"
@@ -72,15 +67,17 @@ typedef union {
     int    int_val;
     BOOL   bool_val;
     float  float_val;
+    char   *string;
 } Value;
 
 typedef struct {
     Type   type;
     Value  val;
+
 } Constant;
 
 typedef enum {
-    EXPR_ID, EXPR_CONST, EXPR_BINOP, EXPR_UNOP, EXPR_LIST
+    EXPR_ID, EXPR_CONST, EXPR_BINOP, EXPR_UNOP, EXPR_ARRAY
 } ExprKind;
 
 struct expr {
@@ -90,15 +87,21 @@ struct expr {
     Constant  constant;     /* for constant values */
     UnOp      unop;         /* for unary operators */
     BinOp     binop;        /* for binary operators */
-    Expr      *e1;          /* for unary and binary operators */
+    Expr      *e1;          /* for unary, array index and binary operators */
     Expr      *e2;          /* for binary operators */
+    Exprs     *indices;     /* for arrays */
+};
+
+struct exprs {
+    Expr      *first;
+    Exprs     *rest;
 };
 
 struct decl {
     int       lineno;
     char      *id;
     Type      type;
-    Array     *array;
+    Intervals *array;
 };
 
 struct decls {
@@ -108,7 +111,7 @@ struct decls {
 
 typedef enum {
     STMT_ASSIGN, STMT_COND, STMT_READ, STMT_WHILE, STMT_WRITE, STMT_FUNC, 
-    STMT_ARRAY_ASSIGN, STMT_ARRAY, STMT_READ_ARRAY
+    STMT_ARRAY_ASSIGN, STMT_ARRAY_READ
 } StmtKind;
 
 typedef struct {
@@ -122,21 +125,20 @@ typedef struct {
     Stmts     *else_branch;
 } Cond;
 
-struct array {
-    char       *id;
-    ArrayElems *values;
+
+struct intervals {
+    Interval  *first;
+    Intervals *rest;
 };
 
-struct arrayelems {
-    ArrayElem *first;
-    ArrayElems *rest;
-};
-
-struct arrayelem {
+struct interval {
     int          upper;
     int          lower;
-    ArrayElemType type;
-    int          index;
+};
+
+struct array {
+    char   *id;
+    Exprs  *indices;
 };
 
 typedef struct {
@@ -149,10 +151,11 @@ typedef union {
     Stmts     *stmts;
     Cond      cond;
     char      *read;
+    char      *array_id;
     Expr      *write;
     Function  *func;
-    Array     *array;
     While     loop;
+    Exprs     *arrayinds;
 } SInfo;
 
 struct stmt {
@@ -167,13 +170,8 @@ struct stmts {
 };
 
 struct func {
-    char *id;
-    Args *args;
-};
-
-struct args {
-   Expr       *first;
-   Args       *rest;
+    char  *id;
+    Exprs *args;
 };
 
 struct param {

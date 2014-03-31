@@ -8,6 +8,7 @@
 NUM     -?[0-9]+
 DEC 	-?[0-9]+\`.[0-9]+
 ID      [a-zA-Z_][A-Za-z_0-9]*
+STRING  \"(\\.|[^"])*\"
 nl      [\n\f]
 nonl    [^\n\f]
 
@@ -59,10 +60,12 @@ write           { return WRITE_TOKEN; }
 	              return FLOAT_TOKEN; }
 {ID}            { yylval.str_val = (char *) strdup(yytext); 
 				  return IDENT_TOKEN; }
+{STRING}		 { yylval.str_val = (char *) strdup(yytext); 
+				  return STRING_TOKEN; }
 
 
 
-[-+*,;()\[\]]   { return yytext[0]; }         /* single character tokens */
+[-+*,;()\[\]""]   { return yytext[0]; }         /* single character tokens */
 
 ":="            { return ASSIGN_TOKEN;   } /* An assignment */
 ".."			{ return INTERVAL_TOKEN; } /* An interval */

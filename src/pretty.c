@@ -65,7 +65,6 @@ void print_procedures(FILE *fp, Procs *procs){
         print_body(fp, current->body);
         //Print a new line
         fprintf(fp, "end\n\n");
-
     }
 
     free(proc_ptrs);
@@ -128,9 +127,9 @@ void print_declarations(FILE *fp, Decls *declarations) {
 
     //Check if array declaration or standard variable declaration
     if(decl->array!=NULL){
-        fprintf(fp, "%s %s[", typenames[decl->type], decl->array->id);
+        fprintf(fp, "%s %s[", typenames[decl->type], decl->id);
         //Print expression list
-        print_expr_list(fp, decl->array->values);
+        print_array_decl(fp, decl->array);
         fprintf(fp, "];\n");
 
     } else {
@@ -139,6 +138,17 @@ void print_declarations(FILE *fp, Decls *declarations) {
 
     // Continue along our weird data structure
     print_declarations(fp, declarations->rest);
+}
+
+void print_array_decl(FILE *fp, Intervals *intervals) {
+    Interval *i = intervals->first;
+    fprintf(fp,"%d..%d", i->lower, i->upper);
+    
+    //Check we need to print the next one
+    if(intervals->rest != NULL){
+        fprintf(fp,", ");
+        print_array_decl(fp, intervals->rest);
+    } 
 }
 
 void print_statements(FILE *fp, Stmts *statements) {
@@ -235,36 +245,31 @@ void print_statement(FILE *fp, Stmt *statement) {
             break;
 
         case STMT_FUNC:
-            
             //Write the funciton name
             fprintf(fp,"%s(",info->func->id);
             //Print the arguments 
-            print_arguments(fp, info->func->args);
+            print_exprs(fp, info->func->args);
             //Close the braces 
             fprintf(fp,");\n");
             break;
 
-        case STMT_ARRAY_ASSIGN:
-            
+        case STMT_ARRAY_ASSIGN:  
             //Print the ident and index
-            fprintf(fp,"%s[", info->array->id);
+            fprintf(fp,"%s[", info->array_id);
+        
             //Print array list
-            print_expr_list(fp, info->array->values);
+            print_exprs(fp, info->arrayinds);
             //Print the end and expression sign
             fprintf(fp,"] := ");
             //Now print the expression
             print_expression(fp, info->assign.asg_expr);
             //Close the expression 
             fprintf(fp,";\n");
+            break;
 
-            break;
-        case STMT_ARRAY:
-            fprintf(fp,"Array index access here\n");
-            break;
-        case STMT_READ_ARRAY:
-    
-            fprintf(fp,"read %s[", info->array->id);
-            print_expr_list(fp, info->array->values);
+        case STMT_ARRAY_READ:
+            fprintf(fp,"read %s[", info->array_id);
+            print_exprs(fp, info->arrayinds);
             //Print the end and expression sign
             fprintf(fp,"];\n");
             break;
@@ -272,40 +277,22 @@ void print_statement(FILE *fp, Stmt *statement) {
     }
 }
 
-void print_arguments(FILE *fp, Args *args){
+void print_exprs(FILE *fp, Exprs *args){
+    
+    //Given that expression lists may be empty
+    if(args == NULL){
+        return;
+    }
+
     //Print the current param
     Expr *current = args->first;
+
     print_expression(fp, current);
     if(args->rest != NULL){
         //Add the comma and whitespace, then continue printing
         fprintf(fp, ", ");
-        print_arguments(fp, args->rest);
+        print_exprs(fp, args->rest);
     }
-}
-
-void print_expr_list(FILE *fp, ArrayElems *elems){
-    //Set up our iterator
-    ArrayElems *i = elems;
-
-    //Cycle through the list and print them
-    while(i!=NULL){
-        ArrayElem *a = i->first;
-        
-        //Print based on range or index
-        if(a->type == ARRAY_RANGE){
-            fprintf(fp, "%d..%d",a->lower, a->upper);
-        } else if (a->type == ARRAY_INDEX){
-            fprintf(fp, "%d",a->index);
-        }
-
-        //Print comma if required
-        if(i->rest != NULL){
-            fprintf(fp, ", ");
-        }
-        //Continue through
-        i = i->rest;
-    }
-
 }
 
 
@@ -330,7 +317,10 @@ void print_expression(FILE *fp, Expr *expr){
             fprintf(fp," %s ", unopname[expr->unop]);
             print_expression(fp, expr->e2);
             break;
-        case EXPR_LIST:
+        case EXPR_ARRAY:
+            fprintf(fp,"%s[", expr->id);
+            print_exprs(fp,expr->indices);
+            fprintf(fp,"]");
             break;
     }
 }
@@ -347,6 +337,9 @@ void print_constant(FILE *fp, Constant *cons){
             break;
         case FLOAT_TYPE:
             fprintf(fp, "%f", cons->val.float_val);
+            break;
+        case STRING_CONST:
+            fprintf(fp, "%s", cons->val.string);
             break;
         default:
             break;

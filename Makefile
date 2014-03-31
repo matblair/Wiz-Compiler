@@ -40,7 +40,7 @@ clean:
 
 $(OBJ): %.o  :  %.c | $(BUILD)
 	@echo Analysing $(basename $(@F)).c!
-	@gcc  --analyze $(filter  %$(basename $(@F)).c, $(SRC))  -I$(AUTO) -I$(SRCD) -o $(BUILD)$@
+	#@gcc  --analyze $(filter  %$(basename $(@F)).c, $(SRC))  -I$(AUTO) -I$(SRCD) -o $(BUILD)$@
 	@gcc  -c $(filter  %$(basename $(@F)).c, $(SRC))  -I$(AUTO) -I$(SRCD) -o $(BUILD)$@
 	@echo Finished $(basename $(@F)).c!
 

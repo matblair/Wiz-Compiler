@@ -41,45 +41,28 @@ void *allocate(int size);
     Param      *param_val;
     Body       *body_val;
     Function   *func_val;
-    Args       *args_val;
-    Array      *array_val;
-    ArrayElem  *aelem_val;
-    ArrayElems *aelems_val;
+    Exprs      *exprs_val;
+    Interval   *inter_val;
+    Intervals  *inters_val;
 }
 
+
+%token BOOL_TOKEN INT_TOKEN
+
 %token '(' ')' ';' '[' ']'
-%token ASSIGN_TOKEN 
-%token AND_TOKEN
-%token BOOL_TOKEN 
-%token DO_TOKEN   
-%token ELSE_TOKEN 
-%token END_TOKEN
-%token FALSE_TOKEN 
-%token FI_TOKEN    
-%token IF_TOKEN    
-%token INT_TOKEN 
-%token NOT_TOKEN
-%token OD_TOKEN 
-%token OR_TOKEN
-%token PROC_TOKEN    
-%token READ_TOKEN
-%token REF_TOKEN 
-%token THEN_TOKEN 
-%token TRUE_TOKEN 
-%token WHILE_TOKEN
-%token VAL_TOKEN 
-%token WRITE_TOKEN
+%token PROC_TOKEN END_TOKEN
+%token NOT_TOKEN AND_TOKEN TRUE_TOKEN OR_TOKEN FALSE_TOKEN
+%token REF_TOKEN VAL_TOKEN
+%token WHILE_TOKEN THEN_TOKEN IF_TOKEN FI_TOKEN OD_TOKEN DO_TOKEN ELSE_TOKEN
+%token WRITE_TOKEN ASSIGN_TOKEN READ_TOKEN
 %token INVALID_TOKEN
-%token GT_TOKEN
-%token GTEQ_TOKEN
-%token LT_TOKEN
-%token LTEQ_TOKEN
-%token EQ_TOKEN
-%token NOTEQ_TOKEN
+%token LTEQ_TOKEN EQ_TOKEN LT_TOKEN GTEQ_TOKEN GT_TOKEN NOTEQ_TOKEN
 %token INTERVAL_TOKEN
-%token <int_val> NUMBER_TOKEN
-%token <str_val> IDENT_TOKEN
+
+%token <int_val>   NUMBER_TOKEN
+%token <str_val>   IDENT_TOKEN
 %token <float_val> FLOAT_TOKEN
+%token <str_val>   STRING_TOKEN
 
 /* Standard operator precedence */
 /* As taken from the provided list of operators */
@@ -103,12 +86,11 @@ void *allocate(int size);
 %type <decl_val>       decl
 %type <stmts_val>      statements 
 %type <stmt_val>       stmt
-%type <expr_val>       expr 
+%type <expr_val>       expr
+%type <exprs_val>      exprs
 // %type <expr_val>       bool_expr 
-%type <args_val>       args
-%type <aelems_val>     arrayelems
-%type <array_val>      array
-%type <aelem_val>      arrayelem
+%type <inter_val>      interval
+%type <inters_val>     intervals
 
 %type <int_val>   assign
 %type <int_val>   start_cond
@@ -248,28 +230,28 @@ declarations
     ;
         
 decl
-    : FLOAT_TOKEN array ';'
+    : INT_TOKEN IDENT_TOKEN '[' intervals ']' ';'
         {
           $$ = allocate(sizeof(struct decl));
           $$->lineno = ln;
-          $$->id = NULL;
-          $$->array = $2;
+          $$->id = $2;
+          $$->array = $4;
           $$->type = INT_ARRAY_TYPE;
         }
-    | INT_TOKEN array ';'
+    | FLOAT_TOKEN IDENT_TOKEN '[' intervals ']' ';'
         {
           $$ = allocate(sizeof(struct decl));
           $$->lineno = ln;
-          $$->id = NULL;
-          $$->array = $2;
+          $$->id = $2;
+          $$->array = $4;
           $$->type = FLOAT_ARRAY_TYPE;
         }
-    | BOOL_TOKEN array ';'
+    | BOOL_TOKEN IDENT_TOKEN '[' intervals ']' ';'
         {
           $$ = allocate(sizeof(struct decl));
           $$->lineno = ln;
-          $$->id = NULL;
-          $$->array = $2;
+          $$->id = $2;
+          $$->array = $4;
           $$->type = BOOL_ARRAY_TYPE;
         }
     | INT_TOKEN IDENT_TOKEN ';'
@@ -297,6 +279,33 @@ decl
     ;
 
 
+intervals
+    : interval ',' intervals
+        {
+          $$ = allocate(sizeof(struct intervals));
+          $$->first = $1;
+          $$->rest = $3;
+        }
+    | interval
+        {
+          $$ = allocate(sizeof(struct intervals));
+          $$->first = $1;
+          $$->rest = NULL;
+        }
+    | /* empty */
+        {
+          $$ = NULL;
+        }
+    ;
+
+interval
+    : NUMBER_TOKEN INTERVAL_TOKEN NUMBER_TOKEN
+        {
+          $$ = allocate(sizeof(struct interval));
+          $$->lower = $1;
+          $$->upper = $3;
+        }
+    ;
 
 get_lineno
     : /* empty */
@@ -351,12 +360,33 @@ stmt
           $$->info.assign.asg_expr = $3;
         }
 
+    | IDENT_TOKEN '[' exprs ']' assign expr ';'                  /* assignment */
+        {
+          $$ = allocate(sizeof(struct stmt));
+          $$->lineno = $5;
+          $$->kind = STMT_ARRAY_ASSIGN;
+          $$->info.assign.asg_id = $1;
+          $$->info.assign.asg_expr = $6;
+          $$->info.arrayinds = $3
+        }
+
     | start_read IDENT_TOKEN ';'                   /* read command */
         {
           $$ = allocate(sizeof(struct stmt));
           $$->lineno = $1;
           $$->kind = STMT_READ;
           $$->info.read = $2;
+        }
+
+    | start_read IDENT_TOKEN '[' exprs ']' ';'                   /* read command */
+        {
+          $$ = allocate(sizeof(struct stmt));
+          $$->lineno = $1;
+          $$->kind = STMT_ARRAY_READ;
+          $$->info.read = $2;
+          $$->info.arrayinds = $4;
+          fprintf(stderr, "read id as %s\n", $2);
+
         }
 
     | start_write expr ';'                         /* write command */
@@ -395,7 +425,7 @@ stmt
           $$->info.loop.cond = $2;
           $$->info.loop.body = $4;
         }
-    | IDENT_TOKEN '(' args ')' ';' get_lineno
+    | IDENT_TOKEN '(' exprs ')' ';' get_lineno
         {
           $$ = allocate(sizeof(struct stmt));
           $$->lineno = $6;
@@ -404,22 +434,25 @@ stmt
           $$->info.func->id   = $1;
           $$->info.func->args = $3;
         }
-    | array ASSIGN_TOKEN expr ';' get_lineno
-        {
-          $$ = allocate(sizeof(struct stmt));
-          $$->lineno = $5;
-          $$->kind = STMT_ARRAY_ASSIGN;
-          $$->info.array = $1;
-          $$->info.assign.asg_expr = $3;
-        }
-    | start_read array ';'                   /* read command */
-        {
-          $$ = allocate(sizeof(struct stmt));
-          $$->lineno = $1;
-          $$->kind = STMT_READ_ARRAY;
-          $$->info.array = $2;
-        }
     ;
+
+exprs
+    : expr ',' exprs
+        {
+          $$ = allocate(sizeof(struct exprs));
+          $$->first = $1;
+          $$->rest = $3;
+        }
+    | expr 
+        {
+          $$ = allocate(sizeof(struct exprs));
+          $$->first = $1;
+          $$->rest = NULL;
+        }
+    | /* empty */
+        {
+          $$ = NULL;
+        }
 
 expr 
     : '-' get_lineno expr                             %prec UNARY_MINUS
@@ -562,6 +595,17 @@ expr
           $$->lineno = $1->lineno == $4->lineno ? $1->lineno : $3;
         }
 
+    | IDENT_TOKEN '[' exprs ']'
+        { 
+          $$ = allocate(sizeof(struct expr));
+          $$->lineno = ln;
+          $$->kind = EXPR_ARRAY;
+          $$->id = $1;
+          $$->e1 = NULL;
+          $$->e2 = NULL;
+          $$->indices = $3;
+        }
+
     | '(' expr ')'
         { $$ = $2;}
 
@@ -610,7 +654,17 @@ expr
           $$->e1 = NULL;
           $$->e2 = NULL;
         }
-    | FLOAT_TOKEN
+    |  STRING_TOKEN
+        {
+          $$ = allocate(sizeof(struct expr));
+          $$->lineno = ln;
+          $$->kind = EXPR_CONST;
+          $$->constant.val.string = $1;
+          $$->constant.type = STRING_CONST;
+          $$->e1 = NULL;
+          $$->e2 = NULL;
+        }
+    |  FLOAT_TOKEN
             {
               $$ = allocate(sizeof(struct expr));
               $$->lineno = ln;
@@ -622,65 +676,6 @@ expr
             }
         ;
 
-args
-    : expr ',' args 
-        {
-          $$ = allocate(sizeof(struct args));
-          $$->first = $1;
-          $$->rest  = $3;
-        }
-    | expr 
-        {
-          $$ = allocate(sizeof(struct args));
-          $$->first = $1;
-          $$->rest  = NULL;
-        }
-    | //  Empty args //
-        { $$ = NULL; }
-    ;
-
-array
-    : IDENT_TOKEN '[' arrayelems ']'
-        {
-          $$ = allocate(sizeof(struct array));
-          $$->id = $1;
-          $$->values = $3;
-        }
-    ;
-
-arrayelems
-    : arrayelem ',' arrayelems
-        {
-          $$ = allocate(sizeof(struct arrayelems));
-          $$->first = $1;
-          $$->rest = $3;
-        }
-    | arrayelem
-        {
-          $$ = allocate(sizeof(struct arrayelems));
-          $$->first = $1;
-          $$->rest = NULL;
-        }
-    |// Empty string //
-        { $$ = NULL;}
-    ;
-
-arrayelem
-    : NUMBER_TOKEN INTERVAL_TOKEN NUMBER_TOKEN
-        {
-          $$ = allocate(sizeof(struct arrayelem));
-          $$->type = ARRAY_RANGE;
-          $$->upper = $3;
-          $$->lower = $1;
-        }
-    | NUMBER_TOKEN
-        {
-          $$ = allocate(sizeof(struct arrayelem));
-          $$->type = ARRAY_INDEX;
-          $$->index = $1;
-        }
-    ;
-    
 // bool_expr
 //     : TRUE_TOKEN
 //         {
