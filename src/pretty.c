@@ -14,10 +14,13 @@
 extern void report_error_and_exit(const char *msg);
 
 int indent_level;
+int cur_precedence;
 
 void
 pretty_prog(FILE *fp, Program *prog) {
+    //Set our initial indent level
     indent_level=0;
+    //Print all procedures
     print_procedures(fp, prog->procedures);
 }
 
@@ -35,8 +38,8 @@ int proc_comparison(const void *a, const void *b){
 void print_procedures(FILE *fp, Procs *procs){
 
     //Go through and count the array
-    int num_procs=0;
-    Procs *rest = procs;
+    int num_procs=1;
+    Procs *rest = procs->rest;
     while(rest!=NULL){
         num_procs++;
         rest = rest->rest;
@@ -103,7 +106,6 @@ void print_params(FILE *fp, Params *params){
 }
 
 void print_body(FILE *fp, Body *body){
-
     //Indent one level in from the main function call
     indent_level++;
     //Print declarations and statements with their respective functions
@@ -170,73 +172,39 @@ void print_statement(FILE *fp, Stmt *statement) {
     //Find the type of statement and call the appropriate function.
     StmtKind kind = statement->kind;
     SInfo *info = &(statement->info);
+    
+    // Define current precedence
+    cur_precedence=0;
+
     //Switch on kind of statement and print appropriately
     switch(kind) {
-        case STMT_ASSIGN : 
-            
-            fprintf(fp,"%s := ", info->assign.asg_id);
-            Expr *expression = info->assign.asg_expr;
-            print_expression(fp, expression);
+        case STMT_ASSIGN: 
+            //Print the left expression
+            print_expression(fp, info->assign.asg_ident);
+            fprintf(fp, " := ");
+            //Redefine current precedence
+            cur_precedence=0;
+            print_expression(fp, info->assign.asg_expr);
             fprintf(fp,";\n");
             break;
 
         case STMT_COND:
-            
-            // Print if branch
-            fprintf(fp,"if ");
-            Expr *if_expr = info->cond.cond;
-            indent_level++;
-            print_expression(fp, if_expr);
-            indent_level--;
-           
-            //Print then branch
-            fprintf(fp," then\n");
-            Stmts *then_stmt = info->cond.then_branch;
-            indent_level++;
-            print_statements(fp, then_stmt);
-            indent_level--;
-
-            //Possibly print else brach
-            if(info->cond.else_branch != NULL){
-                print_indents(fp);
-                fprintf(fp,"else\n");
-                Stmts *else_stmt = info->cond.else_branch;
-                indent_level++;
-                print_statements(fp, else_stmt);
-                indent_level--;
-            }
-
-            //Print the fi
-            print_indents(fp);
-            fprintf(fp, "fi\n");
+            //Hand off to seperate function to print if statements
+            print_conds(fp, &info->cond);
             break;
 
         case STMT_READ:
-            
-            fprintf(fp,"read %s;\n", info->read);
+            fprintf(fp,"read ");
+            print_expression(fp, info->read);
+            fprintf(fp,";\n");
             break;
 
         case STMT_WHILE:
-            
-            //Print the while
-            fprintf(fp,"while ");
-            //Print the expression
-            Expr *while_cond = info->loop.cond;
-            print_expression(fp, while_cond);
-            //Print the do
-            fprintf(fp, " do\n");
-            //Print the statements
-            indent_level++;
-            print_statements(fp, info->loop.body);
-            indent_level--;
-
-            //Print the closing do
-            print_indents(fp);
-            fprintf(fp, "od\n");
+            //Print while
+            print_while(fp, &info->loop);
             break;
 
-        case STMT_WRITE:
-            
+        case STMT_WRITE:   
             //Write the command
             fprintf(fp,"write ");
             //Print the expression 
@@ -252,41 +220,35 @@ void print_statement(FILE *fp, Stmt *statement) {
             //Close the braces 
             fprintf(fp,");\n");
             break;
-
-        case STMT_ARRAY_ASSIGN:  
-            //Print the ident and index
-            fprintf(fp,"%s[", info->array_id);
-        
-            //Print array list
-            print_exprs(fp, info->arrayinds);
-            //Print the end and expression sign
-            fprintf(fp,"] := ");
-            //Now print the expression
-            print_expression(fp, info->assign.asg_expr);
-            //Close the expression 
-            fprintf(fp,";\n");
-            break;
-
-        case STMT_ARRAY_READ:
-            fprintf(fp,"read %s[", info->array_id);
-            print_exprs(fp, info->arrayinds);
-            //Print the end and expression sign
-            fprintf(fp,"];\n");
-            break;
-
     }
 }
 
-void print_exprs(FILE *fp, Exprs *args){
-    
+void print_while(FILE *fp, While *loop){
+    //Print the while
+    fprintf(fp,"while ");
+    //Print the expression
+    Expr *while_cond = loop->cond;
+    print_expression(fp, while_cond);
+    //Print the do
+    fprintf(fp, " do\n");
+    //Print the statements
+    indent_level++;
+    print_statements(fp, loop->body);
+    indent_level--;
+
+    //Print the closing do
+    print_indents(fp);
+    fprintf(fp, "od\n");
+    return;
+}
+
+void print_exprs(FILE *fp, Exprs *args){  
     //Given that expression lists may be empty
     if(args == NULL){
         return;
     }
-
     //Print the current param
     Expr *current = args->first;
-
     print_expression(fp, current);
     if(args->rest != NULL){
         //Add the comma and whitespace, then continue printing
@@ -308,14 +270,10 @@ void print_expression(FILE *fp, Expr *expr){
             print_constant(fp, &(expr->constant));
             break;
         case EXPR_BINOP:
-            print_expression(fp, expr->e1);
-            fprintf(fp," %s ", binopname[expr->binop]);
-            print_expression(fp, expr->e2);
+           print_binop(fp, expr);
             break;
         case EXPR_UNOP:
-            print_expression(fp, expr->e1);
-            fprintf(fp," %s ", unopname[expr->unop]);
-            print_expression(fp, expr->e2);
+            print_unop(fp, expr);
             break;
         case EXPR_ARRAY:
             fprintf(fp,"%s[", expr->id);
@@ -323,6 +281,91 @@ void print_expression(FILE *fp, Expr *expr){
             fprintf(fp,"]");
             break;
     }
+}
+
+void print_binop(FILE *fp, Expr *bin_expr){
+
+    BOOL brackets = cur_precedence>binopprec[bin_expr->binop];
+
+    //Check if we need brackets
+    if(brackets) fprintf(fp, "(");
+    else cur_precedence = binopprec[bin_expr->binop];
+
+    //Print the expression regardless of brackets
+    print_expression(fp, bin_expr->e1);
+    fprintf(fp," %s ", binopname[bin_expr->binop]);
+
+    //If the binop expresion is left associative, then we need to 
+    //print brackets. I.e. if it's 24/(6/2) then we need that.
+    //Likewise for 6 - (2 - 1) we must print the brackets
+
+    if(!is_commutative(bin_expr)){
+        //Then we need to temporarily increase precedence
+        cur_precedence++;
+        print_expression(fp, bin_expr->e2);
+        cur_precedence--;
+    } else {
+        //Just print
+        print_expression(fp, bin_expr->e2);
+
+    }
+
+    if(brackets) fprintf(fp, ")");
+
+    return;
+}
+
+
+BOOL is_commutative(Expr *expr){
+    if(expr->binop == BINOP_ADD || expr->binop == BINOP_MUL){
+        return TRUE;
+    } else {
+        return FALSE;
+    }
+
+}
+
+void print_unop(FILE *fp, Expr *unop_expr){
+    BOOL brackets = cur_precedence>unopprec[unop_expr->unop];
+
+    //Check if we need brackets
+    if(brackets) fprintf(fp, "(");
+    else cur_precedence = unopprec[unop_expr->unop];
+
+    //Print the expression regardless of brackets
+    fprintf(fp,"%s ", unopname[unop_expr->unop]);
+    print_expression(fp, unop_expr->e1);
+
+    //Print brackets as required
+    if(brackets) fprintf(fp, ")");
+
+}
+
+void print_conds(FILE *fp, Cond *info){
+    // Print if branch
+    fprintf(fp,"if ");
+    indent_level++;
+    print_expression(fp, info->cond);
+    indent_level--;
+   
+    //Print then branch
+    fprintf(fp," then\n");
+    indent_level++;
+    print_statements(fp, info->then_branch);
+    indent_level--;
+
+    //Possibly print else brach
+    if(info->else_branch != NULL){
+        print_indents(fp);
+        fprintf(fp,"else\n");
+        indent_level++;
+        print_statements(fp, info->else_branch);
+        indent_level--;
+    }
+
+    //Print the fi
+    print_indents(fp);
+    fprintf(fp, "fi\n");
 }
 
 void print_constant(FILE *fp, Constant *cons){

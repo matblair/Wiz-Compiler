@@ -65,7 +65,7 @@ write           { return WRITE_TOKEN; }
 
 
 
-[-+*,;()\[\]""]   { return yytext[0]; }         /* single character tokens */
+[-+*,;()\[\]""/]   { return yytext[0]; }         /* single character tokens */
 
 ":="            { return ASSIGN_TOKEN;   } /* An assignment */
 ".."			{ return INTERVAL_TOKEN; } /* An interval */

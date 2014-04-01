@@ -67,13 +67,13 @@ void *allocate(int size);
 /* Standard operator precedence */
 /* As taken from the provided list of operators */
 /* on the assignment worksheet */
-%left OR_TOKEN
-%left AND_TOKEN
-%left NOT_TOKEN
-%nonassoc LT_TOKEN GT_TOKEN LTEQ_TOKEN GTEQ_TOKEN EQ_TOKEN NOTEQ_TOKEN
-%left '+' '-' 
-%left '*' '/'
-%left UNARY_MINUS
+%left OR_TOKEN 
+%left AND_TOKEN 
+%left NOT_TOKEN 
+%nonassoc LT_TOKEN GT_TOKEN LTEQ_TOKEN GTEQ_TOKEN EQ_TOKEN NOTEQ_TOKEN 
+%left '+' '-'
+%left '*' '/' 
+%left UNARY_MINUS 
 
 %type <prog_val>       program
 %type <procs_val>      procs
@@ -87,8 +87,8 @@ void *allocate(int size);
 %type <stmts_val>      statements 
 %type <stmt_val>       stmt
 %type <expr_val>       expr
+%type <expr_val>       identifier
 %type <exprs_val>      exprs
-// %type <expr_val>       bool_expr 
 %type <inter_val>      interval
 %type <inters_val>     intervals
 
@@ -351,42 +351,21 @@ statements                             /* non-empty list of statements */
     ;
 
 stmt
-    : IDENT_TOKEN assign expr ';'                  /* assignment */
+    : identifier assign expr ';'                  /* assignment */
         {
           $$ = allocate(sizeof(struct stmt));
           $$->lineno = $2;
           $$->kind = STMT_ASSIGN;
-          $$->info.assign.asg_id = $1;
           $$->info.assign.asg_expr = $3;
+          $$->info.assign.asg_ident = $1;
         }
 
-    | IDENT_TOKEN '[' exprs ']' assign expr ';'                  /* assignment */
-        {
-          $$ = allocate(sizeof(struct stmt));
-          $$->lineno = $5;
-          $$->kind = STMT_ARRAY_ASSIGN;
-          $$->info.assign.asg_id = $1;
-          $$->info.assign.asg_expr = $6;
-          $$->info.arrayinds = $3
-        }
-
-    | start_read IDENT_TOKEN ';'                   /* read command */
+    | start_read identifier ';'                   /* read command */
         {
           $$ = allocate(sizeof(struct stmt));
           $$->lineno = $1;
           $$->kind = STMT_READ;
           $$->info.read = $2;
-        }
-
-    | start_read IDENT_TOKEN '[' exprs ']' ';'                   /* read command */
-        {
-          $$ = allocate(sizeof(struct stmt));
-          $$->lineno = $1;
-          $$->kind = STMT_ARRAY_READ;
-          $$->info.read = $2;
-          $$->info.arrayinds = $4;
-          fprintf(stderr, "read id as %s\n", $2);
-
         }
 
     | start_write expr ';'                         /* write command */
@@ -595,17 +574,6 @@ expr
           $$->lineno = $1->lineno == $4->lineno ? $1->lineno : $3;
         }
 
-    | IDENT_TOKEN '[' exprs ']'
-        { 
-          $$ = allocate(sizeof(struct expr));
-          $$->lineno = ln;
-          $$->kind = EXPR_ARRAY;
-          $$->id = $1;
-          $$->e1 = NULL;
-          $$->e2 = NULL;
-          $$->indices = $3;
-        }
-
     | '(' expr ')'
         { $$ = $2;}
 
@@ -634,14 +602,9 @@ expr
           $$->e2 = NULL;
         }
 
-    | IDENT_TOKEN
-        { 
-          $$ = allocate(sizeof(struct expr));
-          $$->lineno = ln;
-          $$->kind = EXPR_ID;
-          $$->id = $1;
-          $$->e1 = NULL;
-          $$->e2 = NULL;
+    | identifier 
+        {
+          $$ = $1;
         }
 
     | NUMBER_TOKEN
@@ -675,6 +638,28 @@ expr
               $$->e2 = NULL;
             }
         ;
+
+identifier 
+    : IDENT_TOKEN
+        { 
+          $$ = allocate(sizeof(struct expr));
+          $$->lineno = ln;
+          $$->kind = EXPR_ID;
+          $$->id = $1;
+          $$->e1 = NULL;
+          $$->e2 = NULL;
+        }
+    | IDENT_TOKEN '[' exprs ']'
+       { 
+          $$ = allocate(sizeof(struct expr));
+          $$->lineno = ln;
+          $$->kind = EXPR_ARRAY;
+          $$->id = $1;
+          $$->e1 = NULL;
+          $$->e2 = NULL;
+          $$->indices = $3;
+        }
+    ;
 
 // bool_expr
 //     : TRUE_TOKEN
@@ -721,4 +706,3 @@ allocate(int size) {
 }
 
 /*---------------------------------------------------------------------*/
-

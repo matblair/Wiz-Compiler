@@ -34,8 +34,10 @@ typedef enum {
 
 
 #define BINOP_NAMES "+","-","*","/","or","and","=","!=","<","<=",">",">="
+#define BINOP_PRECEDENCE 4, 4, 5, 5, 0, 1, 3, 3, 3, 3, 3, 3
 
 extern const char *binopname[]; 
+extern const int  binopprec[]; 
 
 typedef enum {
     VAL_IND, REF_IND
@@ -51,8 +53,10 @@ typedef enum {
 } UnOp;
 
 #define UNOP_NAMES "-", "not"
+#define UNOP_PRECEDENCE 6, 2
 
 extern const char *unopname[];
+extern const int  unopprec[]; 
 
 typedef enum {
     BOOL_TYPE, INT_TYPE, FLOAT_TYPE, INT_ARRAY_TYPE, 
@@ -87,7 +91,7 @@ struct expr {
     Constant  constant;     /* for constant values */
     UnOp      unop;         /* for unary operators */
     BinOp     binop;        /* for binary operators */
-    Expr      *e1;          /* for unary, array index and binary operators */
+    Expr      *e1;          /* for unary and binary operators */
     Expr      *e2;          /* for binary operators */
     Exprs     *indices;     /* for arrays */
 };
@@ -110,12 +114,11 @@ struct decls {
 };
 
 typedef enum {
-    STMT_ASSIGN, STMT_COND, STMT_READ, STMT_WHILE, STMT_WRITE, STMT_FUNC, 
-    STMT_ARRAY_ASSIGN, STMT_ARRAY_READ
+    STMT_ASSIGN, STMT_COND, STMT_READ, STMT_WHILE, STMT_WRITE, STMT_FUNC
 } StmtKind;
 
 typedef struct {
-    char      *asg_id;
+    Expr      *asg_ident;
     Expr      *asg_expr;
 } Assign;
 
@@ -150,12 +153,10 @@ typedef union {
     Assign    assign;
     Stmts     *stmts;
     Cond      cond;
-    char      *read;
-    char      *array_id;
+    Expr      *read;
     Expr      *write;
     Function  *func;
     While     loop;
-    Exprs     *arrayinds;
 } SInfo;
 
 struct stmt {
