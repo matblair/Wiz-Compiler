@@ -223,7 +223,7 @@ void print_stmt_assign(FILE *fp, Assign rec, int level){
 void print_stmt_while(FILE *fp, While rec, int level){
     fprintf(fp, "%swhile ", sp(level) ); //TODO : fix this remove token
     print_expr(fp, rec.cond);
-    fprintf(fp, " %s\n", "then");
+    fprintf(fp, " %s\n", "do");
     print_statements(fp, rec.body, level +1 );
     fprintf(fp, "%send\n",sp(level)); //TODO: fix this
 }
