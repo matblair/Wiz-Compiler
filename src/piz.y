@@ -21,6 +21,7 @@ extern char    *yytext;
 
 int ln = 1;
 char *rule;
+void warn(const char *msg);
 void yyerror(const char *msg);
 void *allocate(int size);
 int parse_string(char * inputstring);
@@ -113,6 +114,7 @@ BOOL has_parse_error ;
 %type <expr_val>  bool_expr 
 %type <expr_val>  id_expr
 %type <expr_val>  nonbool_expr
+%type <expr_val>  cond_expr
 %type <int_val>   assign
 %type <int_val>   start_cond
 %type <int_val>   start_read
@@ -356,7 +358,7 @@ stmt
           $$->info.write = $2;
         }
 
-    | start_cond bool_expr THEN_TOKEN statements FI_TOKEN 
+    | start_cond cond_expr THEN_TOKEN statements FI_TOKEN 
         {
           $$ = allocate(sizeof(struct stmt));
           $$->lineno = $1;
@@ -366,7 +368,7 @@ stmt
           $$->info.cond.else_branch = NULL;
         }
 
-    | start_cond bool_expr THEN_TOKEN statements ELSE_TOKEN statements FI_TOKEN
+    | start_cond cond_expr THEN_TOKEN statements ELSE_TOKEN statements FI_TOKEN
         {
           $$ = allocate(sizeof(struct stmt));
           $$->lineno = $1;
@@ -376,7 +378,7 @@ stmt
           $$->info.cond.else_branch = $6;
         }
 
-    | start_while bool_expr DO_TOKEN statements OD_TOKEN 
+    | start_while cond_expr DO_TOKEN statements OD_TOKEN 
         {
           $$ = allocate(sizeof(struct stmt));
           $$->lineno = $1;
@@ -385,7 +387,17 @@ stmt
           $$->info.loop.body = $4;
         }
     ;
+cond_expr
+        : id_expr
+         {
+            $$ = $1;
+         }
+        | bool_expr
+         {
+            $$ = $1;
+         }
 
+         ;
 expr 
     : nonbool_expr 
         {
@@ -400,6 +412,20 @@ expr
         { $$ = NULL; }
     ;
 
+id_expr 
+    : '(' id_expr ')'
+        { 
+          $$ = $2;
+        }
+    | IDENT_TOKEN
+        { 
+          $$ = allocate(sizeof(struct expr));
+          $$->lineno = ln;
+          $$->kind = EXPR_ID;
+          $$->id = $1;
+          $$->e1 = NULL;
+          $$->e2 = NULL;
+        }
 
 bool_expr
     : TRUE_TOKEN
@@ -470,6 +496,24 @@ bool_expr
           $$->e1 = $1;
           $$->e2 = $3;
         }
+     | bool_expr '=' nonbool_expr 
+        {
+          $$ = allocate(sizeof(struct expr));
+          $$->lineno = ln;
+          $$->kind = EXPR_BINOP;
+          $$->binop =  BINOP_EQ;
+          $$->e1 = $1;
+          $$->e2 = $3;
+        }
+     | nonbool_expr '=' bool_expr 
+        {
+          $$ = allocate(sizeof(struct expr));
+          $$->lineno = ln;
+          $$->kind = EXPR_BINOP;
+          $$->binop =  BINOP_EQ;
+          $$->e1 = $1;
+          $$->e2 = $3;
+        }
      | bool_expr '=' bool_expr 
         {
           $$ = allocate(sizeof(struct expr));
@@ -480,7 +524,33 @@ bool_expr
           $$->e2 = $3;
         }
      | bool_expr AND_TOKEN bool_expr 
-       
+        {
+          $$ = allocate(sizeof(struct expr));
+          $$->lineno = ln;
+          $$->kind = EXPR_BINOP;
+          $$->binop =  BINOP_AND;
+          $$->e1 = $1;
+          $$->e2 = $3;
+        }
+     | bool_expr AND_TOKEN nonbool_expr
+        {
+          $$ = allocate(sizeof(struct expr));
+          $$->lineno = ln;
+          $$->kind = EXPR_BINOP;
+          $$->binop =  BINOP_AND;
+          $$->e1 = $1;
+          $$->e2 = $3;
+        }
+     | nonbool_expr AND_TOKEN nonbool_expr
+        {
+          $$ = allocate(sizeof(struct expr));
+          $$->lineno = ln;
+          $$->kind = EXPR_BINOP;
+          $$->binop =  BINOP_AND;
+          $$->e1 = $1;
+          $$->e2 = $3;
+        }
+     | nonbool_expr AND_TOKEN bool_expr
         {
           $$ = allocate(sizeof(struct expr));
           $$->lineno = ln;
@@ -498,13 +568,36 @@ bool_expr
           $$->e1 = $1;
           $$->e2 = $3;
         }
+     | bool_expr OR_TOKEN nonbool_expr
+        {
+          $$ = allocate(sizeof(struct expr));
+          $$->lineno = ln;
+          $$->kind = EXPR_BINOP;
+          $$->binop =  BINOP_OR;
+          $$->e1 = $1;
+          $$->e2 = $3;
+        }
+     | nonbool_expr OR_TOKEN nonbool_expr
+        {
+          $$ = allocate(sizeof(struct expr));
+          $$->lineno = ln;
+          $$->kind = EXPR_BINOP;
+          $$->binop =  BINOP_OR;
+          $$->e1 = $1;
+          $$->e2 = $3;
+        }
+     | nonbool_expr OR_TOKEN bool_expr
+        {
+          $$ = allocate(sizeof(struct expr));
+          $$->lineno = ln;
+          $$->kind = EXPR_BINOP;
+          $$->binop =  BINOP_OR;
+          $$->e1 = $1;
+          $$->e2 = $3;
+        }
      | '(' bool_expr ')'
         {
           $$ = $2 ;
-        }
-    | id_expr
-        {
-          $$ = $1;
         }
 
 
@@ -593,16 +686,6 @@ nonbool_expr
 
 
 
-id_expr :
-     IDENT_TOKEN
-        { 
-          $$ = allocate(sizeof(struct expr));
-          $$->lineno = ln;
-          $$->kind = EXPR_ID;
-          $$->id = $1;
-          $$->e1 = NULL;
-          $$->e2 = NULL;
-        }
  
     ;
 
@@ -614,6 +697,12 @@ void
 yyerror(const char *msg) {
     has_parse_error = 1;
     fprintf(stderr, "**** Input line %d, %s, near `%s': %s\n",  ln,linebuf, yytext, msg);
+    return;
+}
+
+void 
+warn(const char *msg) {
+    fprintf(stderr, "Warning : Input line %d, %s, near `%s': %s\n",  ln,linebuf, yytext, msg);
     return;
 }
 
