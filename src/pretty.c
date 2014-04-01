@@ -241,79 +241,46 @@ void print_stmt_if(FILE *fp, Cond rec, int level){
 
 }
 
+void print_expr_binop_op(FILE *fp, char * op, Expr *e1, Expr *e2){
+    BOOL pb = 0;
+    if (e1->kind == EXPR_BINOP) pb=1;
+    if (pb) fprintf(fp, "(");
+    print_expr(fp, e1);
+    if (pb) fprintf(fp, ")");
+    
+    fprintf(fp, "%s", op);
+   
+    pb = 0;
+    if (e2->kind == EXPR_BINOP) pb=1;
+    if (pb) fprintf(fp, "(");
+    print_expr(fp, e2);
+    if (pb) fprintf(fp, ")");
+}
 void print_expr_binop(FILE *fp, BinOp op, Expr *e1, Expr *e2){
    switch(op){
-       case BINOP_ADD : fprintf(fp, "(");
-                        print_expr(fp, e1);
-                        fprintf(fp, "+");
-                        print_expr(fp, e2);
-                        fprintf(fp, ")");
+       case BINOP_ADD : print_expr_binop_op(fp, "+", e1, e2);
                         break;
-       case BINOP_DIV : fprintf(fp, "(");
-                        print_expr(fp, e1);
-                        fprintf(fp, "/");
-                        print_expr(fp, e2);
-                        fprintf(fp, ")");
+       case BINOP_DIV : print_expr_binop_op(fp, "/", e1, e2);
                         break;
-       case BINOP_MUL : fprintf(fp, "(");
-                        print_expr(fp, e1);
-                        fprintf(fp, "*");
-                        print_expr(fp, e2);
-                        fprintf(fp, ")");
+       case BINOP_MUL : print_expr_binop_op(fp, "*", e1, e2);
                         break;
-       case BINOP_SUB : fprintf(fp, "(");
-                        print_expr(fp, e1);
-                        fprintf(fp, "/");
-                        print_expr(fp, e2);
-                        fprintf(fp, ")");
+       case BINOP_SUB : print_expr_binop_op(fp, "-", e1, e2);
                         break;
-       case BINOP_LT : fprintf(fp, "(");
-                        print_expr(fp, e1);
-                        fprintf(fp, "<");
-                        print_expr(fp, e2);
-                        fprintf(fp, ")");
+       case BINOP_LT : print_expr_binop_op(fp, "<", e1, e2);
                         break;
-       case BINOP_GT : fprintf(fp, "(");
-                        print_expr(fp, e1);
-                        fprintf(fp, ">");
-                        print_expr(fp, e2);
-                        fprintf(fp, ")");
+       case BINOP_GT : print_expr_binop_op(fp, ">", e1, e2);
                         break;
-       case BINOP_LTE : fprintf(fp, "(");
-                        print_expr(fp, e1);
-                        fprintf(fp, "<=");
-                        print_expr(fp, e2);
-                        fprintf(fp, ")");
+       case BINOP_LTE : print_expr_binop_op(fp, "<=", e1, e2);
                         break;
-       case BINOP_GTE : fprintf(fp, "(");
-                        print_expr(fp, e1);
-                        fprintf(fp, ">=");
-                        print_expr(fp, e2);
-                        fprintf(fp, ")");
+       case BINOP_GTE : print_expr_binop_op(fp, ">=", e1, e2);
                         break;
-       case BINOP_EQ : fprintf(fp, "(");
-                        print_expr(fp, e1);
-                        fprintf(fp, "=");
-                        print_expr(fp, e2);
-                        fprintf(fp, ")");
+       case BINOP_EQ : print_expr_binop_op(fp, "=", e1, e2);
                         break;
-       case BINOP_NEQ : fprintf(fp, "(");
-                        print_expr(fp, e1);
-                        fprintf(fp, "!=");
-                        print_expr(fp, e2);
-                        fprintf(fp, ")");
+       case BINOP_NEQ : print_expr_binop_op(fp, "-", e1, e2);
                         break;
-       case BINOP_AND : fprintf(fp, "(");
-                        print_expr(fp, e1);
-                        fprintf(fp, " and ");
-                        print_expr(fp, e2);
-                        fprintf(fp, ")");
+       case BINOP_AND : print_expr_binop_op(fp, " and ", e1, e2);
                         break;
-       case BINOP_OR : fprintf(fp, "(");
-                        print_expr(fp, e1);
-                        fprintf(fp, " or ");
-                        print_expr(fp, e2);
-                        fprintf(fp, ")");
+       case BINOP_OR : print_expr_binop_op(fp, " or ", e1, e2);
                         break;
    }
 }
