@@ -13,7 +13,7 @@
 #define TAB_SPACE  4
 
 extern void report_error_and_exit(const char *msg);
-
+void print_expr_list(FILE * fp, ExprList *expr_list);
 void print_stmt_while(FILE *fp, While rec, int level);
 void print_stmt_if(FILE *fp, Cond rec, int level);
 void print_statement(FILE *fp, Stmt *rec, int level);
@@ -152,20 +152,69 @@ void print_statements(FILE *fp, Stmts *rec, int level){
     print_statements(fp, rec->rest, level);
 }
 
+void print_stmt_write(FILE *fp, Expr *rec,int level){
+    fprintf(fp, "%swrite ",sp(level));
+    print_expr(fp, rec);
+    fprintf(fp, ";\n");
+}
+void print_stmt_funccall(FILE *fp, IdExprList *rec, int level){
+    fprintf(fp, "%s%s",sp(level), rec->id);
+    fprintf(fp, "(");
+    print_expr_list(fp, rec->expr_list);
+    fprintf(fp, ")");
+    fprintf(fp, ";\n");
+}
+
+void print_stmt_read(FILE *fp, IdExprList *rec, int level){
+    fprintf(fp, "%sread %s",sp(level), rec->id);
+    if (rec->expr_list != NULL) 
+    {
+        fprintf(fp, "[");
+        print_expr_list(fp, rec->expr_list);
+        fprintf(fp, "]");
+    }
+    fprintf(fp, ";\n");
+}
+
 void print_statement(FILE *fp, Stmt *rec, int level){
     switch (rec->kind){
         case STMT_ASSIGN: print_stmt_assign(fp, rec->info.assign, level);
                           break;
         case  STMT_WHILE : print_stmt_while(fp, rec->info.loop, level);
                            break;
+        case  STMT_WRITE : print_stmt_write(fp, rec->info.write, level);
+                           break;
+        case  STMT_FUNCCALL: print_stmt_funccall(fp, rec->info.id_expr_list, level);
+                           break;
+        case  STMT_READ : print_stmt_read(fp, rec->info.id_expr_list, level);
+                           break;
         case  STMT_COND : print_stmt_if(fp, rec->info.cond, level);
                            break;
     }
 }
 
+void print_expr_list(FILE * fp, ExprList *expr_list){
+    if (expr_list == NULL) return;
+
+    print_expr(fp, expr_list->first);
+    if (expr_list->rest != NULL ) {
+        fprintf(fp, ",");
+        print_expr_list(fp, expr_list->rest);
+
+    }
+}
+
 void print_stmt_assign(FILE *fp, Assign rec, int level){
     
-    fprintf(fp, "%s%s := ",sp(level), rec.asg_id);
+    fprintf(fp, "%s%s",sp(level), rec.id_expr_list->id);
+    if (rec.id_expr_list->expr_list != NULL) 
+    {
+        fprintf(fp, "[");
+        print_expr_list(fp, rec.id_expr_list->expr_list);
+        fprintf(fp, "]");
+    }
+
+    fprintf(fp, " := ");
     print_expr(fp, rec.asg_expr);
     fprintf(fp, "%s\n", ";");
 

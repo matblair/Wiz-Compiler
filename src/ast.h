@@ -12,7 +12,9 @@
 
 #define LINELEN 560
 
+typedef struct idExprList IdExprList;
 typedef struct dimensions Dimensions;
+typedef struct exprList ExprList;
 typedef struct dimension Dimension;
 typedef struct decl   Decl;
 typedef struct decls  Decls;
@@ -91,11 +93,16 @@ struct decls {
 };
 
 typedef enum {
-    STMT_ASSIGN, STMT_COND, STMT_READ, STMT_WHILE, STMT_WRITE
+    STMT_ASSIGN, STMT_COND, STMT_READ, STMT_WHILE, STMT_WRITE, STMT_FUNCCALL
 } StmtKind;
 
+struct idExprList {
+    char * id;
+    ExprList *expr_list;
+};
+
 typedef struct {
-    char      *asg_id;
+    IdExprList *id_expr_list;
     Expr      *asg_expr;
 } Assign;
 
@@ -110,11 +117,12 @@ typedef struct {
     Stmts     *body;
 } While;
 
+
 typedef union {
     Assign    assign;
     Stmts     *stmts;
     Cond      cond;
-    char      *read;
+    IdExprList *id_expr_list;
     Expr      *write;
     While     loop;
 } SInfo;
@@ -178,5 +186,9 @@ struct dimensions{
     Dimensions *rest;
 };
 
+struct exprList {
+    Expr *first;
+    ExprList *rest;
+};
 
 #endif /* AST_H */

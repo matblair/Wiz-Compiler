@@ -50,6 +50,8 @@ BOOL has_parse_error ;
     Type     datatype_val;
     Dimensions *dims_val;
     Dimension *dim_val;
+    ExprList *exprlist_val;
+    IdExprList *idexprlist_val;
 
 }
 
@@ -121,6 +123,7 @@ BOOL has_parse_error ;
 %type <int_val>   start_while
 %type <int_val>   start_write
 %type <int_val>   get_lineno
+%type <exprlist_val> expr_list
 
 %start program
 
@@ -338,18 +341,59 @@ stmt
           $$ = allocate(sizeof(struct stmt));
           $$->lineno = $2;
           $$->kind = STMT_ASSIGN;
-          $$->info.assign.asg_id = $1;
+          $$->info.id_expr_list = allocate(sizeof (struct idExprList));
+          $$->info.id_expr_list->id = $1;
+          $$->info.id_expr_list->expr_list = NULL;
           $$->info.assign.asg_expr = $3;
         }
 
+    | IDENT_TOKEN '[' expr_list ']' assign expr ';'                  /* assignment */
+        {
+          $$ = allocate(sizeof(struct stmt));
+          $$->lineno = $5;
+          $$->kind = STMT_ASSIGN;
+          $$->info.id_expr_list = allocate(sizeof (struct idExprList));
+          $$->info.id_expr_list->id = $1;
+          $$->info.id_expr_list->expr_list = $3;
+          $$->info.assign.asg_expr = $6;
+        }
     | start_read IDENT_TOKEN ';'                   /* read command */
         {
           $$ = allocate(sizeof(struct stmt));
           $$->lineno = $1;
           $$->kind = STMT_READ;
-          $$->info.read = $2;
+          $$->info.id_expr_list = allocate(sizeof (struct idExprList));
+          $$->info.id_expr_list->id = $2;
+          $$->info.id_expr_list->expr_list = NULL;
         }
 
+    | start_read IDENT_TOKEN '[' expr_list  ']' ';'                   /* read command */
+        {
+          $$ = allocate(sizeof(struct stmt));
+          $$->lineno = $1;
+          $$->kind = STMT_READ;
+          $$->info.id_expr_list = allocate(sizeof (struct idExprList));
+          $$->info.id_expr_list->id = $2;
+          $$->info.id_expr_list->expr_list = $4;
+        }
+    | IDENT_TOKEN '('   ')' ';'                   /* read command */
+        {
+          $$ = allocate(sizeof(struct stmt));
+          //$$->lineno = $1; //TODO : is line number required?
+          $$->kind = STMT_FUNCCALL;
+          $$->info.id_expr_list = allocate(sizeof (struct idExprList));
+          $$->info.id_expr_list->id = $1;
+          $$->info.id_expr_list->expr_list = NULL;
+        }
+    | IDENT_TOKEN '(' expr_list  ')' ';'                   /* read command */
+        {
+          $$ = allocate(sizeof(struct stmt));
+          //$$->lineno = $1; //TODO : is line number required?
+          $$->kind = STMT_FUNCCALL;
+          $$->info.id_expr_list = allocate(sizeof (struct idExprList));
+          $$->info.id_expr_list->id = $1;
+          $$->info.id_expr_list->expr_list = $3;
+        }
     | start_write expr ';'                         /* write command */
         {
           $$ = allocate(sizeof(struct stmt));
@@ -398,6 +442,22 @@ cond_expr
          }
 
          ;
+expr_list 
+       : expr ',' expr_list 
+         {
+            $$ = allocate(sizeof(struct exprList));
+            $$->first = $1;
+            $$->rest = $3;
+         }
+       |  expr
+         {
+            $$ = allocate(sizeof(struct exprList));
+            $$->first = $1;
+            $$->rest = NULL;
+         }
+
+
+
 expr 
     : nonbool_expr 
         {
