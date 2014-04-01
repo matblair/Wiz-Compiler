@@ -38,6 +38,7 @@ char* get_datatype(Type datatype){
         case FLOAT_TYPE: return "float";
         default: report_error_and_exit("Unknow datatype...");
     }
+return "Invalid State Shoudl never see this";
 }
 
 char* get_argtype(ArgType argtype){
@@ -256,6 +257,7 @@ void print_expr_binop_op(FILE *fp, char * op, Expr *e1, Expr *e2){
     print_expr(fp, e2);
     if (pb) fprintf(fp, ")");
 }
+
 void print_expr_binop(FILE *fp, BinOp op, Expr *e1, Expr *e2){
    switch(op){
        case BINOP_ADD : print_expr_binop_op(fp, "+", e1, e2);
