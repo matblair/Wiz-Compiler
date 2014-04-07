@@ -5,12 +5,15 @@
     For use in the COMP90045 project 2014.
 -----------------------------------------------------------------------*/
 
+
+/* Definitions for regular expressions used in pattern matching below */
 NUM     -?[0-9]+
 DEC 	-?[0-9]+\`.[0-9]+
 ID      [a-zA-Z_][A-Za-z_0-9]*
 STRING  \"(\\.|[^"])*\"
 nl      [\n\f]
 nonl    [^\n\f]
+
 
 %{
 
@@ -30,6 +33,7 @@ extern int ln;
 %}
 
 %%
+
 
 and 			{ return AND_TOKEN;   }
 bool 			{ return BOOL_TOKEN;  }
@@ -63,10 +67,7 @@ write           { return WRITE_TOKEN; }
 {STRING}		 { yylval.str_val = (char *) strdup(yytext); 
 				  return STRING_TOKEN; }
 
-
-
-[-+*,;()\[\]""/]   { return yytext[0]; }         /* single character tokens */
-
+[-+*,;()\[\]""/]   { return yytext[0]; }   /* single character tokens */
 ":="            { return ASSIGN_TOKEN;   } /* An assignment */
 ".."			{ return INTERVAL_TOKEN; } /* An interval */
 "<"				{ return LT_TOKEN;       } /* Less than  */
@@ -78,7 +79,7 @@ write           { return WRITE_TOKEN; }
 
 "#"{nonl}*{nl}  { ln++; } /* Any comments */
 
-{nl}            { ln++; }
+{nl}            { ln++; } /* Any new lines */
 
 [ \t]+          ; /* skip whitespace */
 

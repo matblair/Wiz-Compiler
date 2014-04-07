@@ -1,8 +1,14 @@
 /* wiz.c */
 
 /*-----------------------------------------------------------------------
-    A driver for a pretty-printer for Iz, a subset of Wiz.
-    For use the COMP90045 project 2014.
+    Developed by: #undef teamname
+    Based on template code provided by Harald Sondergard for COMP90045.
+    Provides a driver for the pretty printer interface.
+
+    Original message included as follows:
+
+    "A driver for a pretty-printer for Iz, a subset of Wiz.
+    For use the COMP90045 project 2014."
 -----------------------------------------------------------------------*/
 
 #include    <string.h>
@@ -33,7 +39,6 @@ main(int argc, char **argv) {
     pretty_print_only = FALSE;
 
     /* Process command line */
-
     if ((argc < 2) || (argc > 3)) {
         usage();
         exit(EXIT_FAILURE);
@@ -62,7 +67,7 @@ main(int argc, char **argv) {
     if (pretty_print_only) 
         pretty_prog(fp, parsed_program);
     else
-        report_error_and_exit("Unable to generate code");
+        report_error_and_exit("Unable to generate code... yet");
     return 0;
 }
 

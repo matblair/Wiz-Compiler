@@ -1,9 +1,16 @@
 /* piz.y */
 
 /*-----------------------------------------------------------------------
-    A bison syntax spec for Iz, a subset of Wiz.
+    Developed by: #undef teamname
+    Based on template code provided by Harald Sondergard for COMP90045.
+    Provides full bison specification for the Wiz 
+    programming language. 
+
+    Original message included as follows:
+
+    "A bison syntax spec for Iz, a subset of Wiz.
     For use in the COMP90045 project 2014.
-    Harald Sondergaard, March 2014.
+    Harald Sondergaard, March 2014."
 -----------------------------------------------------------------------*/
 
 %{
@@ -660,30 +667,6 @@ identifier
           $$->indices = $3;
         }
     ;
-
-// bool_expr
-//     : TRUE_TOKEN
-//         {
-//           $$ = allocate(sizeof(struct expr));
-//           $$->lineno = ln;
-//           $$->kind = EXPR_CONST;
-//           $$->constant.val.bool_val = TRUE;
-//           $$->constant.type = BOOL_TYPE;
-//           $$->e1 = NULL;
-//           $$->e2 = NULL;
-//         }
-
-//     | FALSE_TOKEN
-//         {
-//           $$ = allocate(sizeof(struct expr));
-//           $$->lineno = ln;
-//           $$->kind = EXPR_CONST;
-//           $$->constant.val.bool_val = FALSE;
-//           $$->constant.type = BOOL_TYPE;
-//           $$->e1 = NULL;
-//           $$->e2 = NULL;
-//         }
-//     ;
 %%
 
 /*---------------------------------------------------------------------*/
