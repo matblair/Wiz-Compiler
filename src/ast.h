@@ -44,7 +44,8 @@ typedef struct interval     Interval;
 -----------------------------------------------------------------------*/
 
 typedef enum {
-    BINOP_ADD, BINOP_SUB, BINOP_MUL, BINOP_DIV, BINOP_OR, BINOP_AND,
+    BINOP_ADD, BINOP_SUB, BINOP_MUL, BINOP_DIV,
+    BINOP_OR, BINOP_AND,
     BINOP_EQ, BINOP_NTEQ, BINOP_LT, BINOP_LTEQ, BINOP_GTEQ, BINOP_GT
 } BinOp;
 
