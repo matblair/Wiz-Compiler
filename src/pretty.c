@@ -14,6 +14,26 @@
 
 #define INDENT 4
 
+#define BINOP_OR_PREC 1
+#define BINOP_AND_PREC 2
+#define UNOP_NOT_PREC 3
+#define BINOP_EQ_PREC 4
+#define BINOP_NOTEQ_PREC 4
+#define BINOP_LT_PREC 4
+#define BINOP_GT_PREC 4
+#define BINOP_LTEQ_PREC 4
+#define BINOP_GTEQ_PREC 4
+#define BINOP_ADD_PREC 5
+#define BINOP_SUB_PREC 5
+#define BINOP_MUL_PREC 6
+#define BINOP_DIV_PREC 6
+#define UNOP_MINUS_PREC 7
+
+//TYPES
+typedef enum {
+    RIGHT, LEFT, UNARY
+} SubExprKind;
+
 //DECLS
 extern void report_error_and_exit(const char *msg);
 
@@ -30,11 +50,14 @@ void print_statements(FILE *, Stmts *, int);
 void print_statement(FILE *, Stmt *, int);
 void print_expression(FILE *, Expr *);
 
-BOOL check_parens(Expr *, void *, ExprKind);
-int get_precedence(void *, ExprKind);
+BOOL check_parens(Expr *, Expr *, SubExprKind);
+int get_precedence(Expr *);
 
-void
-pretty_prog(FILE *fp, Program *prog) {
+/**
+ * main driver function of module
+ * prints program to given FILE*
+ */
+void pretty_prog(FILE *fp, Program *prog) {
 
     print_program(fp, prog);
     //report_error_and_exit("Pretty-print has not been implemented yet");
@@ -200,16 +223,11 @@ void print_statement(FILE *fp, Stmt *statement, int indent) {
     switch (statement->kind) {
         case STMT_ASSIGN:
             print_indent(fp, indent);
-            fprintf(fp, "%s := ", statement->info.assign.asg_id);
+            //LHS val of assignment stored as an expression
+            print_expression(fp, statement->info.assign.asg_id);
+            fprintf(fp, ":= ");
+            //print the RHS val of assignment
             print_expression(fp, statement->info.assign.asg_expr);
-            fprintf(fp, ";\n");
-            break;
-        case STMT_ARRAYASSIGN:
-            print_indent(fp, indent);
-            //in this case the LHS value is stored as an expression
-            print_expression(fp, statement->info.array_assign.array_access);
-            fprintf(fp, " := ");
-            print_expression(fp, statement->info.array_assign.asg_expr);
             fprintf(fp, ";\n");
             break;
         case STMT_COND:
@@ -233,7 +251,10 @@ void print_statement(FILE *fp, Stmt *statement, int indent) {
             break;
         case STMT_READ:
             print_indent(fp, indent);
-            fprintf(fp, "read %s;\n", statement->info.read);
+            fprintf(fp, "read ");
+            //print the LHS val to be read into (either an ident or array expr)
+            print_expression(fp, statement->info.read);
+            fprintf(fp, ";\n");
             break;
         case STMT_WHILE:
             print_indent(fp, indent);
@@ -299,7 +320,7 @@ void print_expression(FILE *fp, Expr *expr) {
             break;
         case EXPR_BINOP:
             //decide whether left sub-expression needs parens
-            if (check_parens(expr->e1, (void*)expr->binop, expr->kind)) {
+            if (check_parens(expr->e1, expr, LEFT)) {
                 fprintf(fp, "(");
                 print_expression(fp, expr->e1);
                 fprintf(fp, ")");
@@ -346,7 +367,7 @@ void print_expression(FILE *fp, Expr *expr) {
                     break;
             }
             //decide whether right sub-expression needs parens
-            if (check_parens(expr->e2, (void*)expr->binop, expr->kind)) {
+            if (check_parens(expr->e2, expr, RIGHT)) {
                 fprintf(fp, "(");
                 print_expression(fp, expr->e2);
                 fprintf(fp, ")");
@@ -361,7 +382,7 @@ void print_expression(FILE *fp, Expr *expr) {
             } else {
                 fprintf(fp, "not ");
             }
-            if (check_parens(expr->e1, (void*)expr->unop, expr->kind)) {
+            if (check_parens(expr->e1, expr, UNARY)) {
                 fprintf(fp, "(");
                 print_expression(fp, expr->e1);
                 fprintf(fp, ")");
@@ -385,26 +406,28 @@ void print_expression(FILE *fp, Expr *expr) {
             //print ending ']'
             fprintf(fp, "]");
             break;
+        case EXPR_STR:
+            //print string contents surrounded by quotes
+            fprintf(fp, "\"%s\"", expr->id);
+            break;
     }
 }
 
-BOOL check_parens(Expr *inside_expr, void *op, ExprKind kind) {
-    //if inside expr is not an operation, no need for parens
-    ExprKind inside_kind = inside_expr->kind;
-    void *inside_op;
-    switch (inside_kind) {
-        case EXPR_BINOP:
-            inside_op = (void*)inside_expr->binop;
-            break;
-        case EXPR_UNOP:
-            inside_op = (void*)inside_expr->unop;
-            break;
-        default:
-            return FALSE; /* in default case need no parens */
-            break;
+BOOL check_parens(Expr *inside_expr, Expr *outside_expr, SubExprKind sub_expr_kind) {
+    //if inside_expr is not an operation (binary or unary), definitely do not
+    //need parentheses
+    if (inside_expr->kind != EXPR_BINOP && inside_expr->kind != EXPR_UNOP) {
+        return FALSE;
     }
-    int outside_prec = get_precedence(op, kind);
-    int inside_prec = get_precedence(inside_op, inside_kind);
+    int outside_prec = get_precedence(outside_expr);
+    int inside_prec = get_precedence(inside_expr);
+    //special treatment if we are looking at right subexpression of - or /
+    if (sub_expr_kind == RIGHT && (outside_expr->binop == BINOP_DIV 
+                || outside_expr->binop == BINOP_SUB)) {
+        //artificially boost inside prec level by 1 to force parentheses
+        //around right sub-expression if equal level
+        inside_prec -= 1;
+    }
     //need parens if the inside operation has lower precedence
     //than the outside one
     if (inside_prec < outside_prec) {
@@ -414,63 +437,57 @@ BOOL check_parens(Expr *inside_expr, void *op, ExprKind kind) {
     }
 }
 
+
 /**
- * calculates the precedence level of a given operation, using values:
- * 1: or
- * 2: and
- * 3: not
- * 4: = != < <= > >=
- * 5: + -
- * 6: * /
- * 7: - (unary version)
+ * calculates the precedence level of a given operation, using values
+ * in #define's at top of this file
  *
  * input: op: either a UnOp or BinOp cast to void *
  *        kind: the kind of expression (EXPR_BINOP or EXPR_UNOP)
  * output: the precedence level as an int
  * (-1 cases should never occur)
  */
-int get_precedence(void *op, ExprKind kind) {
-    if (kind == EXPR_UNOP) {
-        switch ((UnOp)op) {
+int get_precedence(Expr *expr) {
+    if (expr->kind == EXPR_UNOP) {
+        switch (expr->unop) {
             case UNOP_MINUS:
-                return 7;
+                return UNOP_MINUS_PREC;
                 break;
             case UNOP_NOT:
-                return 3;
+                return UNOP_NOT_PREC;
                 break;
             default:
-                return -1;
+                return -1; //should never occur
                 break;
         }
-    } else if (kind == EXPR_BINOP) {
-        switch ((BinOp)op) {
+    } else if (expr->kind == EXPR_BINOP) {
+        switch (expr->binop) {
             case BINOP_MUL:
-            case BINOP_DIV:
-                return 6;
+                return BINOP_MUL_PREC;
                 break;
             case BINOP_ADD:
-            case BINOP_SUB:
-                return 5;
+                return BINOP_ADD_PREC;
                 break;
             case BINOP_EQ:
-            case BINOP_NOTEQ:
+                return BINOP_EQ_PREC;
+                break;
             case BINOP_LT:
-            case BINOP_LTEQ:
-            case BINOP_GT:
+                return BINOP_LT_PREC;
+                break;
             case BINOP_GTEQ:
-                return 4;
+                return BINOP_GTEQ_PREC;
                 break;
             case BINOP_AND:
-                return 2;
+                return BINOP_AND_PREC;
                 break;
             case BINOP_OR:
-                return 1;
+                return BINOP_OR_PREC;
                 break;
             default:
-                return -1;
+                return -1; //should never occur
                 break;
         }
     } else {
-        return -1;
+        return -1; //should never occur
     }
 }

@@ -10,6 +10,7 @@ FLOAT   {INT}.[0-9]+
 ID      [a-zA-Z_][A-Za-z_0-9]*
 nl      [\n\f]
 nonl    [^\n\f]
+STR     \"[^\n\f\t\"]*\"
 
 %{
 
@@ -57,6 +58,17 @@ ref             { return REF_TOKEN; }
 {FLOAT}         { yylval.str_val = (char *) strdup(yytext); return FLOAT_NUMBER_TOKEN; }
 
 {ID}            { yylval.str_val = (char *) strdup(yytext); return IDENT_TOKEN; }
+
+{STR}           {
+                    char *lexeme = (char *) strdup(yytext);
+                    int len = strlen(lexeme);
+                    //deremove first and last characters from string
+                    // (the double quotes)
+                    lexeme[len - 1] = '\0';
+                    lexeme = lexeme + 1;
+                    yylval.str_val = (char *) lexeme;
+                    return STR_TOKEN;
+                }
 
 [-+/*;()\[\]<>=,]        { return yytext[0]; }         /* single character tokens */
 

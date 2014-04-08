@@ -61,7 +61,7 @@ typedef struct {
 } Constant;
 
 typedef enum {
-    EXPR_ID, EXPR_CONST, EXPR_BINOP, EXPR_UNOP, EXPR_ARRAY
+    EXPR_ID, EXPR_CONST, EXPR_BINOP, EXPR_UNOP, EXPR_ARRAY, EXPR_STR
 } ExprKind;
 
 struct expr {
@@ -100,19 +100,14 @@ struct bounds {
 };
 
 typedef enum {
-    STMT_ASSIGN, STMT_ARRAYASSIGN, STMT_COND, STMT_READ,
+    STMT_ASSIGN, STMT_COND, STMT_READ,
     STMT_WHILE, STMT_WRITE, STMT_PROC
 } StmtKind;
 
 typedef struct {
-    char      *asg_id;
+    Expr      *asg_id; /* either an ID expression or an array expression */
     Expr      *asg_expr;
 } Assign;
-
-typedef struct {
-    Expr      *array_access;
-    Expr      *asg_expr;
-} ArrayAsn;
 
 typedef struct {
     char      *proc_name;
@@ -132,11 +127,10 @@ typedef struct {
 
 typedef union {
     Assign    assign;
-    ArrayAsn  array_assign;
     Stmts     *stmts;
     ProcCall  proc;
     Cond      cond;
-    char      *read;
+    Expr      *read;
     Expr      *write;
     While     loop;
 } SInfo;

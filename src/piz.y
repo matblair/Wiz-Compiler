@@ -73,6 +73,7 @@ void *allocate(int size);
 %token <str_val> INT_NUMBER_TOKEN
 %token <str_val> FLOAT_NUMBER_TOKEN
 %token <str_val> IDENT_TOKEN
+%token <str_val> STR_TOKEN
 
 /* Standard operator precedence */
 
@@ -99,6 +100,7 @@ void *allocate(int size);
 %type <stmts_val>   statements 
 %type <stmt_val>    stmt
 %type <expr_val>    expr 
+%type <expr_val>    lhs_val
 %type <expr_val>    array_expr
 %type <exprl_val>   expr_list
 
@@ -329,7 +331,7 @@ statements                             /* non-empty list of statements */
     ;
 
 stmt
-    : IDENT_TOKEN assign expr ';'                  /* assignment */
+    : lhs_val assign expr ';'                  /* assignment */
         {
           $$ = allocate(sizeof(struct stmt));
           $$->lineno = $2;
@@ -338,16 +340,7 @@ stmt
           $$->info.assign.asg_expr = $3;
         }
 
-    | array_expr assign expr ';'
-        {
-            $$ = allocate(sizeof(struct stmt));
-            $$->lineno = $2;
-            $$->kind = STMT_ARRAYASSIGN;
-            $$->info.array_assign.array_access = $1;
-            $$->info.array_assign.asg_expr = $3;
-        }
-
-    | start_read IDENT_TOKEN ';'                   /* read command */
+    | start_read lhs_val ';'                   /* read command */
         {
           $$ = allocate(sizeof(struct stmt));
           $$->lineno = $1;
@@ -361,6 +354,17 @@ stmt
           $$->lineno = $1;
           $$->kind = STMT_WRITE;
           $$->info.write = $2;
+        }
+
+    | start_write STR_TOKEN ';'                 /* write with string literal */
+        {
+            $$ = allocate(sizeof(struct stmt));
+            $$-> lineno = $1;
+            $$->kind = STMT_WRITE;
+            $$->info.write = allocate(sizeof(struct expr));
+            $$->info.write->lineno = $1;
+            $$->info.write->kind = EXPR_STR;
+            $$->info.write->id = $2;
         }
 
     | IDENT_TOKEN '(' expr_list ')' ';'  /* proc call with arguments */
@@ -612,6 +616,22 @@ expr
 
     | array_expr 
         { $$ = $1 }
+    ;
+
+lhs_val
+    : IDENT_TOKEN            
+        { 
+          $$ = allocate(sizeof(struct expr));
+          $$->lineno = ln;
+          $$->kind = EXPR_ID;
+          $$->id = $1;
+          $$->e1 = NULL;
+          $$->e2 = NULL;
+        }
+    | array_expr
+        {
+          $$ = $1;
+        }
     ;
 
 array_expr
