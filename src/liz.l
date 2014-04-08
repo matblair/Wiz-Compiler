@@ -5,10 +5,9 @@
     For use in the COMP90045 project 2014.
 -----------------------------------------------------------------------*/
 
-
 /* Definitions for regular expressions used in pattern matching below */
 NUM     -?[0-9]+
-DEC     -?[0-9]+\`.[0-9]+
+DEC     -?[0-9]+\.[0-9]+
 ID      [a-zA-Z_][A-Za-z_0-9]*
 STRING  \"(\\.|[^"])*\"
 nl      [\n\f]
@@ -33,7 +32,6 @@ extern int ln;
 %}
 
 %%
-
 
 and             { return AND_TOKEN;   }
 bool            { return BOOL_TOKEN;  }

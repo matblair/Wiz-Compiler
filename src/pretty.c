@@ -23,9 +23,9 @@
     will increase the number of brackets used, increasing the indent
     level will shift the output to the right be 4*n spaces.
 -----------------------------------------------------------------------*/
+
 #define START_PREC 0
 #define START_INDENT 1
-
 
 /*----------------------------------------------------------------------
     Functions that organise the printing process and
