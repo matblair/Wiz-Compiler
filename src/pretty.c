@@ -81,6 +81,7 @@ void pretty_prog(FILE *fp, Program *prog) {
  */
 void sort_procs(Procs *proc_list) {
     int num_procs = 0;
+    int i = 0;
     Procs *p;
     Proc **proc_array;
     //first get number of procs
@@ -94,7 +95,7 @@ void sort_procs(Procs *proc_list) {
     //create array for storing Proc structs
     proc_array = (Proc **)malloc(sizeof(Proc *) * num_procs);
     p = proc_list;
-    for (int i=0 ; i<num_procs ; i++)
+    for (i=0 ; i<num_procs ; i++)
     {
         proc_array[i] = p->first;
         p = p->rest;
@@ -102,7 +103,7 @@ void sort_procs(Procs *proc_list) {
     qsort(proc_array, num_procs, sizeof(Proc*), proc_compar);
     //now sort the Proc elements in proc_list
     p = proc_list;
-    for (int i=0 ; i<num_procs ; i++)
+    for (i=0 ; i<num_procs ; i++)
     {
         p->first = proc_array[i];
         p = p->rest;
@@ -246,7 +247,8 @@ void print_declarations(FILE *fp, Decls *declarations) {
  * module-defined indentation spacing given by INDENT
  */
 void print_indent(FILE *fp, int indent_level) {
-    for (int i=0 ; i<indent_level*INDENT ; i++) {
+    int i;
+    for (i=0 ; i<indent_level*INDENT ; i++) {
         fprintf(fp, " ");
     }
 }

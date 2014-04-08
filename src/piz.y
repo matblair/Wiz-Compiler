@@ -165,7 +165,7 @@ argument_list
             $$->rest = $3;
         }
     | '(' ')'
-        { $$ = NULL }   /* empty header */
+        { $$ = NULL; }   /* empty header */
     ;
 
 args
@@ -176,7 +176,7 @@ args
             $$->rest = $3;
         }
     | 
-        { $$ = NULL }
+        { $$ = NULL; }
     ;
 
 arg
@@ -630,7 +630,7 @@ expr
         }
 
     | array_expr 
-        { $$ = $1 }
+        { $$ = $1; }
     ;
 
 /*
