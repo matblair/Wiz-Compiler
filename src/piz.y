@@ -13,7 +13,6 @@
 #include "ast.h"
 #include "std.h"
 #include "missing.h"
-#include "liz.h"
 
 Program *parsed_program;
 extern void    report_error_and_exit(const char *msg);
@@ -24,9 +23,6 @@ char *rule;
 void warn(const char *msg);
 void yyerror(const char *msg);
 void *allocate(int size);
-int parse_string(char * inputstring);
-extern void yy_delete_buffer(YY_BUFFER_STATE);
-extern YY_BUFFER_STATE yy_scan_string(const char *string);
 extern char  linebuf[LINELEN+1] ;
 BOOL has_parse_error ;
 %}
@@ -592,6 +588,43 @@ bool_expr
           $$->e1 = $1;
           $$->e2 = $3;
         }
+    | nonbool_expr NEQ_TOKEN nonbool_expr 
+        {
+          $$ = allocate(sizeof(struct expr));
+          $$->lineno = ln;
+          $$->kind = EXPR_BINOP;
+          $$->binop =  BINOP_NEQ;
+          $$->e1 = $1;
+          $$->e2 = $3;
+        }
+     | bool_expr NEQ_TOKEN nonbool_expr 
+        {
+          $$ = allocate(sizeof(struct expr));
+          $$->lineno = ln;
+          $$->kind = EXPR_BINOP;
+          $$->binop =  BINOP_NEQ;
+          $$->e1 = $1;
+          $$->e2 = $3;
+        }
+     | nonbool_expr NEQ_TOKEN bool_expr 
+        {
+          $$ = allocate(sizeof(struct expr));
+          $$->lineno = ln;
+          $$->kind = EXPR_BINOP;
+          $$->binop =  BINOP_NEQ;
+          $$->e1 = $1;
+          $$->e2 = $3;
+        }
+     | bool_expr NEQ_TOKEN bool_expr 
+        {
+          $$ = allocate(sizeof(struct expr));
+          $$->lineno = ln;
+          $$->kind = EXPR_BINOP;
+          $$->binop =  BINOP_NEQ;
+          $$->e1 = $1;
+          $$->e2 = $3;
+        }
+
      | bool_expr AND_TOKEN bool_expr 
         {
           $$ = allocate(sizeof(struct expr));
@@ -811,21 +844,7 @@ int parse_file(FILE *fp, parserOutput *parser_output){
 
 }
 
-int parse_string(char *input_string){
-    int result ;
-    int str_len = strlen(input_string);
-    ln = 0;
-    char * nl_pre_inputstr = allocate(sizeof (char)* ( str_len + 2) );
-    nl_pre_inputstr[str_len+1] = '\0';
-    nl_pre_inputstr[0]='\n';
-    strncpy(nl_pre_inputstr+1, input_string, str_len);
-    has_parse_error = 0;
-    YY_BUFFER_STATE buffer = yy_scan_string(nl_pre_inputstr);
-    result = yyparse() || has_parse_error ;
-    yy_delete_buffer(buffer);
-    free(nl_pre_inputstr);
-    return result;
-}
+
 /*---------------------------------------------------------------------*/
 
 

@@ -1,5 +1,5 @@
 #include "seatest.h"
-#include "wizparser.h"
+#include "pizstringparser.h"
 
 void test_isvalid_assignment(){
     int isValid = 0;

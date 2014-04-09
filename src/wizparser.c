@@ -55,11 +55,6 @@ int wizparser(const char * in_filename, BOOL pretty_print_only) {
     return parse(pretty_print_only, fpin, fp);
 }
 
-int wizparse_str(char * strinput){
-    int result = parse_string(strinput);
-    return  result;
-
-}
 
 /*---------------------------------------------------------------------*/
 

@@ -1,5 +1,5 @@
 #include "seatest.h"
-#include "wizparser.h"
+#include "pizstringparser.h"
 
 int map_to_zero_or_one(int i){
     if (i != 0) return 1;

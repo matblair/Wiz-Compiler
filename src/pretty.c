@@ -404,7 +404,7 @@ print_expr_list(FILE * fp, ExprList * expr_list)
 
 	print_expr(fp, expr_list->first);
 	if (expr_list->rest != NULL) {
-		fprintf(fp, ",");
+		fprintf(fp, ", ");
 		print_expr_list(fp, expr_list->rest);
 
 	}
@@ -445,7 +445,7 @@ print_stmt_while(FILE * fp, While rec, int level)
 	print_expr(fp, rec.cond);
 	fprintf(fp, " %s\n", "do");
 	print_statements(fp, rec.body, level + 1);
-	fprintf(fp, "%send\n", sp(level));
+	fprintf(fp, "%sod\n", sp(level));
 }
 
 /* 

@@ -11,7 +11,6 @@ extern  void    *checked_malloc(int num_bytes);
 
 
 int wizparser(const char * in_filename, BOOL pretty_print_only) ;
-int wizparse_str(char * input_string);
 
 #endif /* WIZ */
 

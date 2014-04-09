@@ -31,19 +31,19 @@ CC = gcc -Wall
 
 
 #all: piz liz wiz
-wizuni : extract
-	make -C $(CURD)  wiz
+wiz : extract
+	make -C $(CURD)  wizmain
 	cp $(BIN)wiz ./
 
-wiz: $(OBJ) run_tests | $(BIN)
-	$(CC) -o $(BIN)$@ $(addprefix $(BUILD), $(OBJ))
+wizmain: $(OBJ)  | $(BIN)
+	$(CC) -o $(BIN)wiz $(addprefix $(BUILD), $(OBJ))
 
 wizdb :  $(addsuffix .c, $(notdir $(basename $(SRC))))	| $(BIN)
 	$(CC) -g -o $(BIN)$@ $(SRC)  $(LIBPATHS)  -I$(AUTO) -I$(SRCD) 
 
 
-run_tests: $(TESTOBJ) $(filter-out wiz.%, $(OBJ)) | $(BIN)
-	$(CC) -o $(BIN)$@ $(addprefix $(BUILD), $^)
+run_tests: liz.h $(TESTOBJ) $(filter-out wiz.%, $(OBJ)) | $(BIN)
+	$(CC) -o $(BIN)$@ $(filter-out %.h, $(addprefix $(BUILD), $^))
 	$(BIN)$@
 
 
@@ -57,7 +57,10 @@ liz: piz.o liz.o $(OBJ)  | $(BIN)
 piz.c piz.h:  | $(AUTO)
 	bison --debug -v -d $(SRCD)piz.y -o $(AUTO)piz.c
 
-liz.c liz.h: piz.h  | $(AUTO)
+liz.c: piz.h  | $(AUTO)
+	flex -s -o$(AUTO)liz.c $(flexheaderoption) $(SRCD)liz.l
+
+liz.h: piz.h  | $(AUTO)
 	flex -s -o$(AUTO)liz.c --header-file=$(AUTO)liz.h $(SRCD)liz.l
 
 $(CSRC) $(TESTS):
