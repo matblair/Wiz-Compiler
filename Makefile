@@ -61,6 +61,7 @@ liz.c: piz.h  | $(AUTO)
 	flex -s -o$(AUTO)liz.c $(flexheaderoption) $(SRCD)liz.l
 
 liz.h: piz.h  | $(AUTO)
+	@echo Generating header for flex requires flex version atleast 2.5.33, else it will fail
 	flex -s -o$(AUTO)liz.c --header-file=$(AUTO)liz.h $(SRCD)liz.l
 
 $(CSRC) $(TESTS):
