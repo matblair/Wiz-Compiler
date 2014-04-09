@@ -126,7 +126,7 @@ BOOL has_parse_error ;
 %type <exprlist_val> expr_list
 
 %start program
-
+%expect 1
 %token-table
 
 
