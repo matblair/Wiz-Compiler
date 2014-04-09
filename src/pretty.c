@@ -559,7 +559,7 @@ print_expr_binop(FILE * fp, BinOp op, Expr * e1, Expr * e2)
 		print_expr_binop_op(fp, op, "and", e1, e2);
 		break;
 	case BINOP_OR:
-		print_expr_binop_op(fp, op,  " or ", e1, e2);
+		print_expr_binop_op(fp, op,  "or", e1, e2);
 		break;
 	}
 }
