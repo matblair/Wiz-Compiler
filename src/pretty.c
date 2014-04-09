@@ -40,6 +40,7 @@ void		print     (FILE * fp, Procs * rec, int level);
 char           *sp(int);
 char           *get_datatype(Type datatype);
 void    	print_expr_unop(FILE *, UnOp , Expr *);
+void        print_idexprlist_arr_style(FILE *fp, IdExprList *rec);
 
 
 
@@ -99,6 +100,7 @@ get_argtype(ArgType argtype)
  * =====================================================================================
  */
 void    	print_expr_unop(FILE * fp, UnOp op , Expr * expr){
+    BOOL brac;
     switch(op){
         case UNOP_MINUS : fprintf(fp, "-");
                           break;
@@ -106,7 +108,14 @@ void    	print_expr_unop(FILE * fp, UnOp op , Expr * expr){
                           break;
 
     }
+    
+    //check if brackets required
+    brac = 0;
+    if (expr->kind == EXPR_BINOP) brac = 1;
+
+    if (brac == 1) fprintf(fp, "(");
     print_expr(fp, expr);
+    if (brac == 1) fprintf(fp, ")");
 }
 
 /*
@@ -327,18 +336,19 @@ print_stmt_write(FILE * fp, Expr * rec, int level)
 /* 
  * ===  FUNCTION  ======================================================================
  *         Name:  print_stmt_funccall
- *  Description:  Prints function call statements based on IdExprList record
+ *  Description:  Prints function call statements based on FuncationCall record
  * =====================================================================================
  */
 void
-print_stmt_funccall(FILE * fp, IdExprList * rec, int level)
+print_stmt_funccall(FILE * fp, FunctionCall rec, int level)
 {
-	fprintf(fp, "%s%s", sp(level), rec->id);
+	fprintf(fp, "%s%s", sp(level), rec.id_expr_list->id);
 	fprintf(fp, "(");
-	print_expr_list(fp, rec->expr_list);
+	print_expr_list(fp, rec.id_expr_list->expr_list);
 	fprintf(fp, ")");
 	fprintf(fp, ";\n");
 }
+
 
 /* 
  * ===  FUNCTION  ======================================================================
@@ -349,13 +359,9 @@ print_stmt_funccall(FILE * fp, IdExprList * rec, int level)
 void
 print_stmt_read(FILE * fp, IdExprList * rec, int level)
 {
-	fprintf(fp, "%sread %s", sp(level), rec->id);
-	if (rec->expr_list != NULL) {
-		fprintf(fp, "[");
-		print_expr_list(fp, rec->expr_list);
-		fprintf(fp, "]");
-	}
-	fprintf(fp, ";\n");
+	fprintf(fp, "%sread ", sp(level));
+	print_idexprlist_arr_style(fp, rec);
+    fprintf(fp, ";\n");
 }
 
 /* 
@@ -379,10 +385,10 @@ print_statement(FILE * fp, Stmt * rec, int level)
 		print_stmt_write(fp, rec->info.write, level);
 		break;
 	case STMT_FUNCCALL:
-		print_stmt_funccall(fp, rec->info.id_expr_list, level);
+		print_stmt_funccall(fp, rec->info.func_call, level);
 		break;
 	case STMT_READ:
-		print_stmt_read(fp, rec->info.id_expr_list, level);
+		print_stmt_read(fp, rec->info.read, level);
 		break;
 	case STMT_COND:
 		print_stmt_if(fp, rec->info.cond, level);
@@ -420,12 +426,8 @@ void
 print_stmt_assign(FILE * fp, Assign rec, int level)
 {
 
-	fprintf(fp, "%s%s", sp(level), rec.id_expr_list->id);
-	if (rec.id_expr_list->expr_list != NULL) {
-		fprintf(fp, "[");
-		print_expr_list(fp, rec.id_expr_list->expr_list);
-		fprintf(fp, "]");
-	}
+	fprintf(fp, "%s", sp(level));
+    print_idexprlist_arr_style(fp, rec.id_expr_list);
 	fprintf(fp, " := ");
 	print_expr(fp, rec.asg_expr);
 	fprintf(fp, "%s\n", ";");
@@ -548,7 +550,7 @@ print_expr_binop(FILE * fp, BinOp op, Expr * e1, Expr * e2)
 		print_expr_binop_op(fp, "=", e1, e2);
 		break;
 	case BINOP_NEQ:
-		print_expr_binop_op(fp, "-", e1, e2);
+		print_expr_binop_op(fp, "!=", e1, e2);
 		break;
 	case BINOP_AND:
 		print_expr_binop_op(fp, " and ", e1, e2);
@@ -556,6 +558,23 @@ print_expr_binop(FILE * fp, BinOp op, Expr * e1, Expr * e2)
 	case BINOP_OR:
 		print_expr_binop_op(fp, " or ", e1, e2);
 		break;
+	}
+}
+
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:  print_idexprlist_arr_style
+ *  Description:  Prints Id followed by Expression list, which can be empty, as
+ *  an array, ie within [ ]
+ * =====================================================================================
+ */
+void print_idexprlist_arr_style(FILE *fp, IdExprList *rec){
+     
+    fprintf(fp, "%s", rec->id);
+	if (rec->expr_list != NULL) {
+		fprintf(fp, "[");
+		print_expr_list(fp, rec->expr_list);
+		fprintf(fp, "]");
 	}
 }
 
@@ -571,7 +590,7 @@ print_expr(FILE * fp, Expr * rec)
 {
 	switch (rec->kind) {
 	case EXPR_ID:
-		fprintf(fp, "%s", rec->id);
+		print_idexprlist_arr_style(fp, rec->id);
 		break;
 	case EXPR_CONST:
 		print_expr_const(fp, rec->constant);

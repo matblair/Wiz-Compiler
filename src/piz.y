@@ -110,7 +110,7 @@ BOOL has_parse_error ;
 %type <stmt_val>  stmt
 %type <expr_val>  expr 
 %type <expr_val>  bool_expr 
-%type <expr_val>  id_expr
+%type <idexprlist_val>  id_expr
 %type <expr_val>  nonbool_expr
 %type <expr_val>  cond_expr
 %type <int_val>   assign
@@ -204,7 +204,6 @@ arg
           $$->type = $2;
           $$->id = $3;
           $$->arg_type= $1;
-          //TODO: remove this $$->dims = $5;
 
         }
     ;
@@ -332,63 +331,40 @@ statements                             /* non-empty list of statements */
     ;
 
 stmt
-    : IDENT_TOKEN assign expr ';'                  /* assignment */
+    : id_expr assign expr ';'                  /* assignment */
         {
           $$ = allocate(sizeof(struct stmt));
           $$->lineno = $2;
           $$->kind = STMT_ASSIGN;
-          $$->info.id_expr_list = allocate(sizeof (struct idExprList));
-          $$->info.id_expr_list->id = $1;
-          $$->info.id_expr_list->expr_list = NULL;
+          $$->info.assign.id_expr_list = $1;
           $$->info.assign.asg_expr = $3;
         }
 
-    | IDENT_TOKEN '[' expr_list ']' assign expr ';'                  /* assignment */
-        {
-          $$ = allocate(sizeof(struct stmt));
-          $$->lineno = $5;
-          $$->kind = STMT_ASSIGN;
-          $$->info.id_expr_list = allocate(sizeof (struct idExprList));
-          $$->info.id_expr_list->id = $1;
-          $$->info.id_expr_list->expr_list = $3;
-          $$->info.assign.asg_expr = $6;
-        }
-    | start_read IDENT_TOKEN ';'                   /* read command */
+    | start_read id_expr ';'                   /* read command */
         {
           $$ = allocate(sizeof(struct stmt));
           $$->lineno = $1;
           $$->kind = STMT_READ;
-          $$->info.id_expr_list = allocate(sizeof (struct idExprList));
-          $$->info.id_expr_list->id = $2;
-          $$->info.id_expr_list->expr_list = NULL;
+          $$->info.read = $2;
         }
 
-    | start_read IDENT_TOKEN '[' expr_list  ']' ';'                   /* read command */
-        {
-          $$ = allocate(sizeof(struct stmt));
-          $$->lineno = $1;
-          $$->kind = STMT_READ;
-          $$->info.id_expr_list = allocate(sizeof (struct idExprList));
-          $$->info.id_expr_list->id = $2;
-          $$->info.id_expr_list->expr_list = $4;
-        }
-    | IDENT_TOKEN '('   ')' ';'                   /* read command */
+    | IDENT_TOKEN '('   ')' ';'                   /* function call command */
         {
           $$ = allocate(sizeof(struct stmt));
           //$$->lineno = $1; //TODO : is line number required?
           $$->kind = STMT_FUNCCALL;
-          $$->info.id_expr_list = allocate(sizeof (struct idExprList));
-          $$->info.id_expr_list->id = $1;
-          $$->info.id_expr_list->expr_list = NULL;
+          $$->info.func_call.id_expr_list = allocate(sizeof(struct idExprList));
+          $$->info.func_call.id_expr_list->id = $1;
+          $$->info.func_call.id_expr_list->expr_list = NULL;
         }
-    | IDENT_TOKEN '(' expr_list  ')' ';'                   /* read command */
+    | IDENT_TOKEN '(' expr_list  ')' ';'  /* function call , non empty expr command */
         {
           $$ = allocate(sizeof(struct stmt));
           //$$->lineno = $1; //TODO : is line number required?
           $$->kind = STMT_FUNCCALL;
-          $$->info.id_expr_list = allocate(sizeof (struct idExprList));
-          $$->info.id_expr_list->id = $1;
-          $$->info.id_expr_list->expr_list = $3;
+          $$->info.func_call.id_expr_list = allocate(sizeof(struct idExprList));
+          $$->info.func_call.id_expr_list->id = $1;
+          $$->info.func_call.id_expr_list->expr_list = $3;
         }
     | start_write expr ';'                         /* write command */
         {
@@ -439,7 +415,11 @@ stmt
 cond_expr
         : id_expr
          {
-            $$ = $1;
+            $$ = allocate(sizeof (struct expr));
+            $$->kind = EXPR_ID;
+            $$->id = $1;
+            $$->e1 = NULL;
+            $$->e2 = NULL;
          }
         | bool_expr
          {
@@ -484,12 +464,15 @@ id_expr
         }
     | IDENT_TOKEN
         { 
-          $$ = allocate(sizeof(struct expr));
-          $$->lineno = ln;
-          $$->kind = EXPR_ID;
+          $$ = allocate(sizeof(struct idExprList));
           $$->id = $1;
-          $$->e1 = NULL;
-          $$->e2 = NULL;
+          $$->expr_list = NULL;
+        }
+    | IDENT_TOKEN '[' expr_list ']'
+        { 
+          $$ = allocate(sizeof(struct idExprList));
+          $$->id = $1;
+          $$->expr_list = $3;
         }
 
 bool_expr
@@ -775,7 +758,11 @@ nonbool_expr
 
     | id_expr
         { 
-          $$ = $1;
+            $$ = allocate(sizeof (struct expr));
+            $$->kind = EXPR_ID;
+            $$->id = $1;
+            $$->e1 = NULL;
+            $$->e2 = NULL;
         }
 
     | NUMBER_TOKEN

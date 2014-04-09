@@ -73,7 +73,7 @@ typedef enum {
 struct expr {
     int       lineno;
     ExprKind  kind;
-    char      *id;          /* for identifiers */
+    IdExprList     *id;          /* for identifiers */
     Constant  constant;     /* for constant values */
     UnOp      unop;         /* for unary operators */
     BinOp     binop;        /* for binary operators */
@@ -118,13 +118,18 @@ typedef struct {
     Stmts     *body;
 } While;
 
+typedef struct {
+    IdExprList *id_expr_list;
+} FunctionCall;
+
 
 typedef union {
     Assign    assign;
     Stmts     *stmts;
     Cond      cond;
-    IdExprList *id_expr_list;
+    IdExprList      *read;
     Expr      *write;
+    FunctionCall func_call;
     While     loop;
 } SInfo;
 
