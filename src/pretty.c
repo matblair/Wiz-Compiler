@@ -640,6 +640,12 @@ sp(int numberOfTabs)
 	return space;
 }
 
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:  get_binop_prec
+ *  Description:  Returns the precedence of the binary operator
+ * =====================================================================================
+ */
 int get_binop_prec(BinOp op){
     int prec = 1;
     if (op == BINOP_OR) return prec;
