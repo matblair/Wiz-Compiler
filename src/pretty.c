@@ -630,10 +630,9 @@ char           *
 sp(int numberOfTabs)
 {
 	int		i;
-	char           *space = malloc(sizeof(char) * (TAB_SPACE) *
-				       (numberOfTabs) + 1);
-	for (i = 0; i < numberOfTabs; i++)
-		space[i] = '\t';
+	char           *space = malloc( (sizeof(char) * TAB_SPACE * numberOfTabs) + sizeof(char) );
+	for (i = 0; i < numberOfTabs * TAB_SPACE; i++)
+		space[i] = ' ';
 	space[i] = '\0';
 	return space;
 }

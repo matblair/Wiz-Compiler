@@ -4,7 +4,7 @@ AUTO=./auto/
 SRCD=./src/
 TESTD=./tests/
 LIBD=./lib/
-SUBD=./tmp/
+SUBD=./submissionfiles/
 CURD=./
 
 
