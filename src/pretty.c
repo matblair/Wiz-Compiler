@@ -14,6 +14,7 @@
  * ================================================================ */
 
 #include <stdlib.h>
+#include <string.h>
 #include <stdio.h>
 #include "ast.h"
 
@@ -41,7 +42,7 @@ char           *sp(int);
 char           *get_datatype(Type datatype);
 void    	print_expr_unop(FILE *, UnOp , Expr *);
 void        print_idexprlist_arr_style(FILE *fp, IdExprList *rec);
-
+int         get_binop_prec(BinOp op);
 
 
 /*
@@ -484,13 +485,14 @@ print_stmt_if(FILE * fp, Cond rec, int level)
  * =====================================================================================
  */
 void
-print_expr_binop_op(FILE * fp, char *op, Expr * e1, Expr * e2)
+print_expr_binop_op(FILE * fp, BinOp opkind, char *op, Expr * e1, Expr * e2)
 {
 	BOOL		pb = 0;
 
-    //print left operand
-	if (e1->kind == EXPR_BINOP)
+	if (e1->kind == EXPR_BINOP && get_binop_prec(e1->binop) < get_binop_prec(opkind) )
 		pb = 1;
+
+    //print left operand
 	if (pb)
 		fprintf(fp, "(");
 	print_expr(fp, e1);
@@ -502,8 +504,9 @@ print_expr_binop_op(FILE * fp, char *op, Expr * e1, Expr * e2)
 
     //print right operand
 	pb = 0;
-	if (e2->kind == EXPR_BINOP)
+	if (e2->kind == EXPR_BINOP  && get_binop_prec(e2->binop) < get_binop_prec(opkind))
 		pb = 1;
+
 	if (pb)
 		fprintf(fp, "(");
 	print_expr(fp, e2);
@@ -523,40 +526,40 @@ print_expr_binop(FILE * fp, BinOp op, Expr * e1, Expr * e2)
 {
 	switch (op) {
 	case BINOP_ADD:
-		print_expr_binop_op(fp, "+", e1, e2);
+		print_expr_binop_op(fp, op, "+", e1, e2);
 		break;
 	case BINOP_DIV:
-		print_expr_binop_op(fp, "/", e1, e2);
+		print_expr_binop_op(fp, op, "/", e1, e2);
 		break;
 	case BINOP_MUL:
-		print_expr_binop_op(fp, "*", e1, e2);
+		print_expr_binop_op(fp, op, "*", e1, e2);
 		break;
 	case BINOP_SUB:
-		print_expr_binop_op(fp, "-", e1, e2);
+		print_expr_binop_op(fp, op, "-", e1, e2);
 		break;
 	case BINOP_LT:
-		print_expr_binop_op(fp, "<", e1, e2);
+		print_expr_binop_op(fp, op, "<", e1, e2);
 		break;
 	case BINOP_GT:
-		print_expr_binop_op(fp, ">", e1, e2);
+		print_expr_binop_op(fp, op, ">", e1, e2);
 		break;
 	case BINOP_LTE:
-		print_expr_binop_op(fp, "<=", e1, e2);
+		print_expr_binop_op(fp, op, "<=", e1, e2);
 		break;
 	case BINOP_GTE:
-		print_expr_binop_op(fp, ">=", e1, e2);
+		print_expr_binop_op(fp, op, ">=", e1, e2);
 		break;
 	case BINOP_EQ:
-		print_expr_binop_op(fp, "=", e1, e2);
+		print_expr_binop_op(fp, op, "=", e1, e2);
 		break;
 	case BINOP_NEQ:
-		print_expr_binop_op(fp, "!=", e1, e2);
+		print_expr_binop_op(fp, op, "!=", e1, e2);
 		break;
 	case BINOP_AND:
-		print_expr_binop_op(fp, " and ", e1, e2);
+		print_expr_binop_op(fp, op, "and", e1, e2);
 		break;
 	case BINOP_OR:
-		print_expr_binop_op(fp, " or ", e1, e2);
+		print_expr_binop_op(fp, op,  " or ", e1, e2);
 		break;
 	}
 }
@@ -637,6 +640,29 @@ sp(int numberOfTabs)
 	return space;
 }
 
+int get_binop_prec(BinOp op){
+    int prec = 1;
+    if (op == BINOP_OR) return prec;
+    prec++;
+    if (op == BINOP_AND) return prec;
+    prec++;
+    if (op == BINOP_EQ) return prec;
+    if (op == BINOP_NEQ) return prec;
+    prec++;
+    if (op == BINOP_GTE) return prec;
+    if (op == BINOP_GT) return prec;
+    if (op == BINOP_LT) return prec;
+    if (op == BINOP_LTE) return prec;
+    prec++;
+    if (op == BINOP_ADD) return prec;
+    if (op == BINOP_SUB) return prec;
+    prec++;
+    if (op == BINOP_MUL) return prec;
+    if (op == BINOP_DIV) return prec;
+
+    return prec;
+
+}
 
 /* 
  * ===  FUNCTION  ======================================================================

@@ -85,7 +85,6 @@ BOOL has_parse_error ;
 %token END_TOKEN
 
 /* Standard operator precedence */
-%left ';'
 %left OR_TOKEN
 %left AND_TOKEN
 %nonassoc '=' NEQ_TOKEN
@@ -94,7 +93,6 @@ BOOL has_parse_error ;
 %left '*' '/'
 %left NOT_TOKEN
 %left UNARY_MINUS
-%left BOOL_OP
 %type <prog_val>  program
 %type <procs_val> procs
 %type <proc_val> proc
