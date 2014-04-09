@@ -39,6 +39,8 @@ void		print_statements(FILE *, Stmts *, int level);
 void		print     (FILE * fp, Procs * rec, int level);
 char           *sp(int);
 char           *get_datatype(Type datatype);
+void    	print_expr_unop(FILE *, UnOp , Expr *);
+
 
 
 /*
@@ -87,6 +89,23 @@ get_argtype(ArgType argtype)
 	}
 }
 
+
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:  print_expr_unop
+ *  Description:  Print Unary operations
+ * =====================================================================================
+ */
+void    	print_expr_unop(FILE * fp, UnOp op , Expr * expr){
+    switch(op){
+        case UNOP_MINUS : fprintf(fp, "-");
+                          break;
+        case UNOP_NOT : fprintf(fp, "not ");
+                          break;
+
+    }
+    print_expr(fp, expr);
+}
 
 /*
  * ===  FUNCTION
@@ -429,6 +448,8 @@ void
 print_expr_binop_op(FILE * fp, char *op, Expr * e1, Expr * e2)
 {
 	BOOL		pb = 0;
+
+    //print left operand
 	if (e1->kind == EXPR_BINOP)
 		pb = 1;
 	if (pb)
@@ -436,9 +457,11 @@ print_expr_binop_op(FILE * fp, char *op, Expr * e1, Expr * e2)
 	print_expr(fp, e1);
 	if (pb)
 		fprintf(fp, ")");
+    
+    //print operator
+	fprintf(fp, " %s ", op);
 
-	fprintf(fp, "%s", op);
-
+    //print right operand
 	pb = 0;
 	if (e2->kind == EXPR_BINOP)
 		pb = 1;
@@ -518,6 +541,9 @@ print_expr(FILE * fp, Expr * rec)
 		break;
 	case EXPR_BINOP:
 		print_expr_binop(fp, rec->binop, rec->e1, rec->e2);
+		break;
+	case EXPR_UNOP:
+		print_expr_unop(fp, rec->unop, rec->e1);
 		break;
 
 	}

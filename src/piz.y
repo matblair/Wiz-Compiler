@@ -401,7 +401,16 @@ stmt
           $$->kind = STMT_WRITE;
           $$->info.write = $2;
         }
-
+    | start_write STRING_TOKEN ';'                         /* write command */
+        {
+          $$ = allocate(sizeof(struct stmt));
+          $$->lineno = $1;
+          $$->kind = STMT_WRITE;
+          $$->info.write = allocate(sizeof(struct expr));
+          $$->info.write->kind = EXPR_CONST;
+          $$->info.write->constant =*$2;
+          $$->info.write->constant.type = STR_LITERAL;
+        }
     | start_cond cond_expr THEN_TOKEN statements FI_TOKEN 
         {
           $$ = allocate(sizeof(struct stmt));
@@ -655,6 +664,24 @@ bool_expr
           $$->e1 = $1;
           $$->e2 = $3;
         }
+     |  NOT_TOKEN bool_expr
+        {
+          $$ = allocate(sizeof(struct expr));
+          $$->lineno = ln;
+          $$->kind = EXPR_UNOP;
+          $$->unop =  UNOP_NOT;
+          $$->e1 = $2;
+          $$->e2 = NULL;
+        }
+     |  NOT_TOKEN nonbool_expr
+        {
+          $$ = allocate(sizeof(struct expr));
+          $$->lineno = ln;
+          $$->kind = EXPR_UNOP;
+          $$->unop =  UNOP_NOT;
+          $$->e1 = $2;
+          $$->e2 = NULL;
+        }
      | '(' bool_expr ')'
         {
           $$ = $2 ;
@@ -744,11 +771,6 @@ nonbool_expr
         }
     ;
 
-
-
- 
-    ;
-
 %%
 
 /*---------------------------------------------------------------------*/
@@ -785,14 +807,6 @@ int parse_file(FILE *fp, parserOutput *parser_output){
     result = yyparse() || has_parse_error;
     
     parser_output->parsed_program = parsed_program;
-    /*parser_output->token_table = allocate(sizeof(yytname)) ;
-    ttlen = sizeof(yytname)/sizeof(char*); 
-    for(i=0;i<ttlen-1; i++){
-        printf("%d length of string %s, %lu with size %lu\n",i, yytname[i], strlen(yytname[i]),
-        sizeof(yytname[i]));
-        parser_output->token_table[i] =  allocate(sizeof(yytname[i]));
-        //strncpy(parser_output->token_table[i], yytname[i], strlen(yytname[i]));
-    }*/
     return result;
 
 }

@@ -39,6 +39,7 @@ extern const char *binopname[];
 
 typedef enum {
     UNOP_MINUS
+    , UNOP_NOT
 } UnOp;
 
 #define UNOP_NAMES "-"

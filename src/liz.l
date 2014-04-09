@@ -11,7 +11,7 @@ nl      [\n\f]
 nonl    [^\n\f]
 FLOAT   -?[0-9]*\.[0-9]+
 dim     [0-9]+\.\.[0-9]+
-STRING  \"\"
+STRING  \"[^\n\t\"]*\"
 %{
 
 #include <stdlib.h>
