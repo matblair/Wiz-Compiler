@@ -4,6 +4,8 @@ AUTO=./auto/
 SRCD=./src/
 TESTD=./tests/
 LIBD=./lib/
+SUBD=./tmp/
+CURD=./
 
 
 ASRC = $(wildcard $(SRCD)*.l) $(wildcard $(SRCD)*.y)
@@ -23,12 +25,15 @@ TESTOBJ = $(addsuffix .o,$(basename $(TESTS)))
 
 LIBPATHS = $(addprefix -I, $(wildcard $(LIBD)*))
 
-
+TARFILE=source.tar.gz
 
 CC = gcc -Wall
 
 
 #all: piz liz wiz
+wizuni : extract
+	make -C $(CURD)  wiz
+	cp $(BIN)wiz ./
 
 wiz: $(OBJ) | $(BIN)
 	$(CC) -o $(BIN)$@ $(addprefix $(BUILD), $(OBJ))
@@ -58,7 +63,7 @@ liz.c liz.h: piz.h  | $(AUTO)
 $(CSRC) $(TESTS):
 
 clean:
-	/bin/rm -rf $(BUILD) $(AUTO) $(BIN)
+	/bin/rm -rf $(BUILD) $(AUTO) $(BIN) $(SUBD) wiz
 
 $(OBJ) $(TESTOBJ): %.o  :  %.c | $(BUILD)
 	gcc  -c $(filter  %$(basename $(@F)).c, $(SRC) $(TESTSRC)) $(LIBPATHS)  -I$(AUTO) -I$(SRCD) -o $(BUILD)$@
@@ -73,5 +78,16 @@ print:
 	@echo Test Obj: $(TESTOBJ)
 	@echo LibPaths : $(LIBPATHS) 
 
-$(AUTO) $(BUILD) $(BIN):
+$(SUBD) $(AUTO) $(BUILD) $(BIN):
 	mkdir -p $@
+
+submit : | $(SUBD)
+	tar cfvz $(SUBD)$(TARFILE) $(SRCD) $(LIBD) $(TESTD) 
+	cp Makefile $(SUBD)
+	@echo *****The files to submit are in $(SUBD)
+
+extract : 
+ifeq ($(wildcard $(SRCD)),) 
+		tar xfvz $(TARFILE) 
+endif
+
