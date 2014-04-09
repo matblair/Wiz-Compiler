@@ -35,7 +35,7 @@ wizuni : extract
 	make -C $(CURD)  wiz
 	cp $(BIN)wiz ./
 
-wiz: $(OBJ) | $(BIN)
+wiz: $(OBJ) run_tests | $(BIN)
 	$(CC) -o $(BIN)$@ $(addprefix $(BUILD), $(OBJ))
 
 wizdb :  $(addsuffix .c, $(notdir $(basename $(SRC))))	| $(BIN)

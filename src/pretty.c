@@ -46,7 +46,8 @@ void    	print_expr_unop(FILE *, UnOp , Expr *);
 /*
  * ===  FUNCTION
  * ======================================================================
- * Name:  get_datatype Description:  Returns the datatype string associated
+ * Name:  get_datatype 
+ * Description:  Returns the datatype string associated
  * with the datatype enum
  * ===========================================================================
  * ==========
@@ -71,7 +72,8 @@ get_datatype(Type datatype)
 /*
  * ===  FUNCTION
  * ======================================================================
- * Name:  get_argtype Description:  Returns the argtype string associated
+ * Name:  get_argtype 
+ * Description:  Returns the argtype string associated
  * with the argument enum
  * ===========================================================================
  * ==========
@@ -155,13 +157,13 @@ print_proc(FILE * fp, Proc * rec, int level)
 }
 
 
-void
 /* 
  * ===  FUNCTION  ======================================================================
  *         Name:  print_procdef
  *  Description:  Prints ProcDef* type record
  * =====================================================================================
  */
+void
 print_procdef(FILE * fp, ProcDef * rec, int level)
 {
 	fprintf(fp, "%s ", "proc");
@@ -174,13 +176,13 @@ print_procdef(FILE * fp, ProcDef * rec, int level)
 }
 
 
-void
 /* 
  * ===  FUNCTION  ======================================================================
  *         Name:  print_arguments
  *  Description:  Prints Arguments * type record
  * =====================================================================================
  */
+void
 print_arguments(FILE * fp, Arguments * rec)
 {
 	if (rec == NULL)
@@ -207,6 +209,13 @@ print_argument(FILE * fp, Argument * rec)
 	fprintf(fp, "%s", rec->id);
 }
 
+
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:  print_dim
+ *  Description:  Prints a dimension , from type Dimension *
+ * =====================================================================================
+ */
 void
 print_dim(FILE * fp, Dimension * dim)
 {
@@ -215,6 +224,13 @@ print_dim(FILE * fp, Dimension * dim)
 	fprintf(fp, "%d..%d", dim->lb, dim->ub);
 }
 
+
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:  print_dims
+ *  Description:  Prints dimensions, from type Dimensions *
+ * =====================================================================================
+ */
 void
 print_dims(FILE * fp, Dimensions * dims)
 {
@@ -226,6 +242,14 @@ print_dims(FILE * fp, Dimensions * dims)
 	print_dims(fp, dims->rest);
 
 }
+
+
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:  print_declaration
+ *  Description:  Prints a declaration of a procedure based on Decl * type
+ * =====================================================================================
+ */
 void
 print_declaration(FILE * fp, Decl * decl, int level)
 {
@@ -248,6 +272,12 @@ print_declaration(FILE * fp, Decl * decl, int level)
 }
 
 
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:  print_declarations
+ *  Description:  Prints declarations based on Decls * 
+ * =====================================================================================
+ */
 void
 print_declarations(FILE * fp, Decls * declarations, int level)
 {
@@ -260,6 +290,13 @@ print_declarations(FILE * fp, Decls * declarations, int level)
 }
 
 
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:  print_statements
+ *  Description:  Prints a generic statement, is a wrapper to other functions
+ *  which perform the actual print based on the statement type
+ * =====================================================================================
+ */
 void
 print_statements(FILE * fp, Stmts * rec, int level)
 {
