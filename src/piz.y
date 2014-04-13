@@ -4,6 +4,8 @@
     A bison syntax spec for Iz, a subset of Wiz.
     For use in the COMP90045 project 2014.
     Harald Sondergaard, March 2014.
+ 
+     Edited by team #undef TEAMNAME for full language Wiz
 -----------------------------------------------------------------------*/
 
 %{

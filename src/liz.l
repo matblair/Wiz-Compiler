@@ -3,6 +3,8 @@
 /*-----------------------------------------------------------------------
     A flex specification for Iz, a subset of Wiz.
     For use in the COMP90045 project 2014.
+ 
+    Edited by team #undef TEAMNAME for full language Wiz
 -----------------------------------------------------------------------*/
 
 INT     [0-9]+

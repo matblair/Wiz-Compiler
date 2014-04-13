@@ -3,6 +3,8 @@
 /*-----------------------------------------------------------------------
     Definitions for the abstract syntax trees generated for Iz programs.
     For use in the COMP90045 project 2014.
+ 
+     Edited by team #undef TEAMNAME for full language Wiz
 -----------------------------------------------------------------------*/
 
 #ifndef AST_H
