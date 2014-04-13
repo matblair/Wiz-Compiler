@@ -37,6 +37,7 @@ typedef enum {
 //DECLS
 extern void report_error_and_exit(const char *msg);
 
+
 void sort_procs(Procs *);
 int proc_compar(const void *, const void *);
 void print_program(FILE *, Program *);
@@ -64,6 +65,8 @@ void print_expr_array(FILE *, Expr *);
 
 BOOL check_parens(Expr *, Expr *, SubExprKind);
 int get_precedence(Expr *);
+
+void *smalloc(size_t);
 
 /**
  * main driver function of module
@@ -93,7 +96,7 @@ void sort_procs(Procs *proc_list) {
         p = p->rest;
     }
     //create array for storing Proc structs
-    proc_array = (Proc **)malloc(sizeof(Proc *) * num_procs);
+    proc_array = (Proc **)smalloc(sizeof(Proc *) * num_procs);
     p = proc_list;
     for (i=0 ; i<num_procs ; i++)
     {
@@ -603,14 +606,29 @@ int get_precedence(Expr *expr) {
             case BINOP_MUL:
                 return BINOP_MUL_PREC;
                 break;
+            case BINOP_DIV:
+                return BINOP_DIV_PREC;
+                break;
             case BINOP_ADD:
                 return BINOP_ADD_PREC;
+                break;
+            case BINOP_SUB:
+                return BINOP_SUB_PREC;
                 break;
             case BINOP_EQ:
                 return BINOP_EQ_PREC;
                 break;
+            case BINOP_NOTEQ:
+                return BINOP_NOTEQ_PREC;
+                break;
             case BINOP_LT:
                 return BINOP_LT_PREC;
+                break;
+            case BINOP_LTEQ:
+                return BINOP_LTEQ_PREC;
+                break;
+            case BINOP_GT:
+                return BINOP_GT_PREC;
                 break;
             case BINOP_GTEQ:
                 return BINOP_GTEQ_PREC;
@@ -629,3 +647,17 @@ int get_precedence(Expr *expr) {
         return -1; //should never occur
     }
 }
+
+/**
+ * secure malloc function
+ */
+void *smalloc(size_t variable_size) {
+    void *location = malloc(variable_size);
+    if (location == NULL) {
+        //means error occured with memory allocation - crash
+        fprintf(stderr, "malloc call failed; aborting program execution!\n");
+        exit(EXIT_FAILURE);
+    }
+    return location;
+}
+
