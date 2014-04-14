@@ -65,23 +65,23 @@ write           { return WRITE_TOKEN; }
 {STRING}         { yylval.str_val = (char *) strdup(yytext); 
                   return STRING_TOKEN; }
 
-[-+*,;()\[\]""/]   { return yytext[0]; }   /* single character tokens */
-":="            { return ASSIGN_TOKEN;   } /* An assignment */
-".."            { return INTERVAL_TOKEN; } /* An interval */
-"<"             { return LT_TOKEN;       } /* Less than  */
-"<="            { return LTEQ_TOKEN;     } /* Less than or equal to  */
-">"             { return GT_TOKEN;       } /* Greater than  */
-">="            { return GTEQ_TOKEN;     } /* Greater than or equal to */
-"="             { return EQ_TOKEN;       } /* Equal to */
-"!="            { return NOTEQ_TOKEN;    } /* Not equal to */
+[-+*,;()\[\]""/] { return yytext[0];      }   /* single character tokens */
+":="             { return ASSIGN_TOKEN;   } /* An assignment */
+".."             { return INTERVAL_TOKEN; } /* An interval */
+"<"              { return LT_TOKEN;       } /* Less than  */
+"<="             { return LTEQ_TOKEN;     } /* Less than or equal to  */
+">"              { return GT_TOKEN;       } /* Greater than  */
+">="             { return GTEQ_TOKEN;     } /* Greater than or equal to */
+"="              { return EQ_TOKEN;       } /* Equal to */
+"!="             { return NOTEQ_TOKEN;    } /* Not equal to */
 
-"#"{nonl}*{nl}  { ln++; } /* Any comments */
+"#"{nonl}*{nl}   { ln++; } /* Any comments */
 
-{nl}            { ln++; } /* Any new lines */
+{nl}             { ln++; } /* Any new lines */
 
-[ \t]+          ; /* skip whitespace */
-
-.               { return INVALID_TOKEN; }     /* parser may find a use for this */
+[ \t]+           ; /* skip whitespace */
+ 
+.                { return INVALID_TOKEN; }     /* parser may find a use for this */
 
 %%
 

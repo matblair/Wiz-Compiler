@@ -166,8 +166,8 @@ struct intervals {
 };
 
 struct interval {
-    int          upper;
-    int          lower;
+    int  upper;
+    int  lower;
 };
 
 /*----------------------------------------------------------------------
@@ -249,7 +249,7 @@ struct stmts {
 struct param {
     ParamsInd ind;
     Type      type;
-    char     *id;
+    char      *id;
 };
 
 struct params {
@@ -263,18 +263,18 @@ struct header {
 };
 
 struct body {
-    Decls      *decls;
-    Stmts      *statements;
+    Decls    *decls;
+    Stmts    *statements;
 };
 
 struct proc {
-    Header     *header;
-    Body       *body;
+    Header   *header;
+    Body     *body;
 };
 
 struct procs {
-    Proc      *first;
-    Procs     *rest;
+    Proc     *first;
+    Procs    *rest;
 };
 
 /*----------------------------------------------------------------------

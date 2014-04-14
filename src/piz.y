@@ -82,6 +82,9 @@ void *allocate(int size);
 %left '*' '/' 
 %left UNARY_MINUS 
 
+
+/* The types for our values to be used in the abstract */
+/* syntax tree                                         */
 %type <prog_val>       program
 %type <procs_val>      procs
 %type <proc_val>       proc
@@ -99,6 +102,7 @@ void *allocate(int size);
 %type <inter_val>      interval
 %type <inters_val>     intervals
 
+/* Types for identifying statement types */ 
 %type <int_val>   assign
 %type <int_val>   start_cond
 %type <int_val>   start_read
@@ -676,13 +680,7 @@ yyerror(const char *msg) {
 
 void *
 allocate(int size) {
-
-    void    *addr;
-
-    addr = malloc((size_t) size);
-    if (addr == NULL) 
-        report_error_and_exit("Out of memory");
-    return addr;
+    return checked_malloc(size);
 }
 
 /*---------------------------------------------------------------------*/

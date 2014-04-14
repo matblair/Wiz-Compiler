@@ -1,10 +1,10 @@
 /* ast.c */
 /*-----------------------------------------------------------------------
     Developed by: #undef TEAMNAME
-	Definitions for abstract syntax trees generated for Wiz programs,
-	based of scaffolding code provided by Harald Sondergard for COMP90045
-	Original comment as follows:
-	
+    Definitions for abstract syntax trees generated for Wiz programs,
+    based of scaffolding code provided by Harald Sondergard for COMP90045
+    Original comment as follows:
+    
     Definitions for abstract syntax trees generated for Iz programs.
     (The bulk of these can be found in the header file ast.h).
     For use the COMP90045 project 2014.
