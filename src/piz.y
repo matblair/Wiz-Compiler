@@ -90,6 +90,7 @@ void *allocate(int size);
 %type <proc_val>       proc
 %type <header_val>     header
 %type <body_val>       body
+%type <params_val>     parameter_list
 %type <params_val>     params
 %type <param_val>      param
 %type <decls_val>      declarations
@@ -99,6 +100,7 @@ void *allocate(int size);
 %type <expr_val>       expr
 %type <expr_val>       identifier
 %type <exprs_val>      exprs
+%type <exprs_val>      exprs_list
 %type <inter_val>      interval
 %type <inters_val>     intervals
 
@@ -148,7 +150,7 @@ proc
     ;
 
 header 
-    : IDENT_TOKEN '(' params ')'
+    : IDENT_TOKEN '(' parameter_list ')'
         {
           $$ = allocate(sizeof(struct header));
           $$->id = $1;
@@ -156,20 +158,25 @@ header
         } 
       ;
 
-params 
-    : param ',' params
-        {
+parameter_list
+    : param params
+       {
           $$ = allocate(sizeof(struct params));
           $$->first = $1;
+          $$->rest  = $2;
+       }
+    |  /* Empty Params! */
+        { $$ = NULL; }
+    ;
+
+params 
+    : ',' param params
+        {
+          $$ = allocate(sizeof(struct params));
+          $$->first = $2;
           $$->rest  = $3;
         }
-    | param 
-        {
-          $$ = allocate(sizeof(struct params));
-          $$->first = $1;
-          $$->rest  = NULL;
-        }
-    |  /* Empty Params! */
+    |  /* Empty which means end of list */
         { $$ = NULL; }
     ;
 
@@ -412,7 +419,7 @@ stmt
           $$->info.loop.cond = $2;
           $$->info.loop.body = $4;
         }
-    | IDENT_TOKEN '(' exprs ')' ';' get_lineno
+    | IDENT_TOKEN '(' exprs_list ')' ';' get_lineno
         {
           $$ = allocate(sizeof(struct stmt));
           $$->lineno = $6;
@@ -423,23 +430,29 @@ stmt
         }
     ;
 
-exprs
-    : expr ',' exprs
+exprs_list
+    : expr exprs
         {
           $$ = allocate(sizeof(struct exprs));
           $$->first = $1;
-          $$->rest = $3;
-        }
-    | expr 
-        {
-          $$ = allocate(sizeof(struct exprs));
-          $$->first = $1;
-          $$->rest = NULL;
+          $$->rest = $2;
         }
     | /* empty */
         {
           $$ = NULL;
+    }
+
+exprs
+    : ',' expr exprs
+        {
+          $$ = allocate(sizeof(struct exprs));
+          $$->first = $2;
+          $$->rest = $3;
         }
+    | /* empty */
+        {
+          $$ = NULL;
+    }
 
 expr 
     : '-' get_lineno expr                             %prec UNARY_MINUS
@@ -657,7 +670,7 @@ identifier
           $$->e1 = NULL;
           $$->e2 = NULL;
         }
-    | IDENT_TOKEN '[' exprs ']'
+    | IDENT_TOKEN '[' exprs_list ']'
        { 
           $$ = allocate(sizeof(struct expr));
           $$->lineno = ln;

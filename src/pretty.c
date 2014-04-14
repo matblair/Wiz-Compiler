@@ -507,7 +507,7 @@ void print_constant(FILE *fp, Constant *cons){
             fprintf(fp, "%f", cons->val.float_val);
             break;
         case STRING_CONST:
-            fprintf(fp, "%s", cons->val.string);
+            fprintf(fp, "\"%s\"", cons->val.string);
             break;
         default:
             // Should not get her as only remaining types are int_array_type

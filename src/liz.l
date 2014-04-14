@@ -6,12 +6,13 @@
 -----------------------------------------------------------------------*/
 
 /* Definitions for regular expressions used in pattern matching below */
-NUM     -?[0-9]+
-DEC     -?[0-9]+\.[0-9]+
+NUM     [0-9]+
+DEC     [0-9]+\.[0-9]+
 ID      [a-zA-Z_][A-Za-z_0-9]*
-STRING  \"(\\.|[^"])*\"
+/*STRING  \"(\\.|[^"])*\"*/
 nl      [\n\f]
 nonl    [^\n\f]
+STR      [^\t\n\f\"]*
 
 
 %{
@@ -30,6 +31,8 @@ int yywrap(void);
 extern int ln;
 
 %}
+
+%x string
 
 %%
 
@@ -62,10 +65,8 @@ write           { return WRITE_TOKEN; }
                   return FLOAT_TOKEN; }
 {ID}            { yylval.str_val = (char *) strdup(yytext); 
                   return IDENT_TOKEN; }
-{STRING}         { yylval.str_val = (char *) strdup(yytext); 
-                  return STRING_TOKEN; }
 
-[-+*,;()\[\]""/] { return yytext[0];      }   /* single character tokens */
+[-+*,;()\[\]/] { return yytext[0];      }   /* single character tokens */
 ":="             { return ASSIGN_TOKEN;   } /* An assignment */
 ".."             { return INTERVAL_TOKEN; } /* An interval */
 "<"              { return LT_TOKEN;       } /* Less than  */
@@ -77,11 +78,17 @@ write           { return WRITE_TOKEN; }
 
 "#"{nonl}*{nl}   { ln++; } /* Any comments */
 
+\"              BEGIN(string);
+<string>\"      BEGIN(INITIAL);
+<string>{STR}   { yylval.str_val = (char *)strdup(yytext); return STRING_TOKEN;}
+
+
 {nl}             { ln++; } /* Any new lines */
 
 [ \t]+           ; /* skip whitespace */
  
-.                { return INVALID_TOKEN; }     /* parser may find a use for this */
+.                { return INVALID_TOKEN; }  /* parser may find a use for this */
+<string>(.|{nl}) { return INVALID_TOKEN; }  /* parser may find a use for this */
 
 %%
 
