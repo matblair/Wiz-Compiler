@@ -5,10 +5,15 @@
     For use in the COMP90045 project 2014.
 -----------------------------------------------------------------------*/
 
-NUM     -?[0-9]+
+/* Definitions for regular expressions used in pattern matching below */
+NUM     [0-9]+
+DEC     [0-9]+\.[0-9]+
 ID      [a-zA-Z_][A-Za-z_0-9]*
+/*STRING  \"(\\.|[^"])*\"*/
 nl      [\n\f]
 nonl    [^\n\f]
+STR      [^\t\n\f\"]*
+
 
 %{
 
@@ -27,37 +32,63 @@ extern int ln;
 
 %}
 
+%x string
+
 %%
 
-do              { return DO_TOKEN; }
-else            { return ELSE_TOKEN; }
+and             { return AND_TOKEN;   }
+bool            { return BOOL_TOKEN;  }
+do              { return DO_TOKEN;    }
+else            { return ELSE_TOKEN;  }
+end             { return END_TOKEN;   }
 false           { return FALSE_TOKEN; }
-fi              { return FI_TOKEN; }
-if              { return IF_TOKEN; }
-int             { return INT_TOKEN; }
-bool            { return BOOL_TOKEN; }
-od              { return OD_TOKEN; }
-read            { return READ_TOKEN; }
-then            { return THEN_TOKEN; }
-true            { return TRUE_TOKEN; }
+fi              { return FI_TOKEN;    }
+if              { return IF_TOKEN;    }
+int             { return INT_TOKEN;   }
+float           { return FLOAT_TOKEN; }
+not             { return NOT_TOKEN;   }
+od              { return OD_TOKEN;    }
+or              { return OR_TOKEN;    }
+proc            { return PROC_TOKEN;  }
+read            { return READ_TOKEN;  }
+ref             { return REF_TOKEN;   }
+then            { return THEN_TOKEN;  }
+true            { return TRUE_TOKEN;  }
+val             { return VAL_TOKEN;   }
 while           { return WHILE_TOKEN; }
 write           { return WRITE_TOKEN; }
 
-{NUM}           { yylval.int_val = atoi(yytext); return NUMBER_TOKEN; }
 
-{ID}            { yylval.str_val = (char *) strdup(yytext); return IDENT_TOKEN; }
+{NUM}           { yylval.int_val = atoi(yytext); 
+                  return NUMBER_TOKEN; }
+{DEC}           { yylval.int_val = atof(yytext); 
+                  return FLOAT_TOKEN; }
+{ID}            { yylval.str_val = (char *) strdup(yytext); 
+                  return IDENT_TOKEN; }
 
-[-+*;()]        { return yytext[0]; }         /* single character tokens */
+[-+*,;()\[\]/] { return yytext[0];      }   /* single character tokens */
+":="             { return ASSIGN_TOKEN;   } /* An assignment */
+".."             { return INTERVAL_TOKEN; } /* An interval */
+"<"              { return LT_TOKEN;       } /* Less than  */
+"<="             { return LTEQ_TOKEN;     } /* Less than or equal to  */
+">"              { return GT_TOKEN;       } /* Greater than  */
+">="             { return GTEQ_TOKEN;     } /* Greater than or equal to */
+"="              { return EQ_TOKEN;       } /* Equal to */
+"!="             { return NOTEQ_TOKEN;    } /* Not equal to */
 
-":="            { return ASSIGN_TOKEN; }
+"#"{nonl}*{nl}   { ln++; } /* Any comments */
 
-"#"{nonl}*{nl}  { ln++; }
+\"              BEGIN(string);
+<string>\"      BEGIN(INITIAL);
+<string>{STR}   { yylval.str_val = (char *)strdup(yytext); return STRING_TOKEN;}
 
-{nl}            { ln++; }
 
-[ \t]+          ; /* skip whitespace */
+{nl}             { ln++; } /* Any new lines */
 
-.               { return INVALID_TOKEN; }     /* parser may find a use for this */
+[ \t]+           ; /* skip whitespace */
+ 
+.                { return INVALID_TOKEN; }  /* parser may find a use for this */
+<string>(.|{nl}) { return INVALID_TOKEN; }  /* parser may find a use for this */
 
 %%
 
