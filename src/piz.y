@@ -1,7 +1,6 @@
 /* piz.y */
-
 /*-----------------------------------------------------------------------
-    Developed by: #undef teamname
+    Developed by: #undef TEAMNAME
     Based on template code provided by Harald Sondergard for COMP90045.
     Provides full bison specification for the Wiz 
     programming language. 
@@ -19,6 +18,7 @@
 #include <stdlib.h>
 #include "ast.h"
 #include "std.h"
+#include "helper.h"
 #include "missing.h"
 
 extern Program *parsed_program;
@@ -56,7 +56,7 @@ void *allocate(int size);
 
 %token BOOL_TOKEN INT_TOKEN
 
-%token '(' ')' ';' '[' ']'
+%token '(' ')' ';' '[' ']' '*' '+' '/'
 %token PROC_TOKEN END_TOKEN
 %token NOT_TOKEN AND_TOKEN TRUE_TOKEN OR_TOKEN FALSE_TOKEN
 %token REF_TOKEN VAL_TOKEN
@@ -299,10 +299,7 @@ intervals
           $$->first = $1;
           $$->rest = NULL;
         }
-    | /* empty */
-        {
-          $$ = NULL;
-        }
+
     ;
 
 interval

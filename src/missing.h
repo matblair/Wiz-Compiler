@@ -1,6 +1,6 @@
 
 /*-----------------------------------------------------------------------
-    Used by: #undef teamname
+    Developed by: #undef TEAMNAME
 
     Provided with source package for COMP90045 Programming Language
     Implenetation, semester 1 2014. Original code provided below is 

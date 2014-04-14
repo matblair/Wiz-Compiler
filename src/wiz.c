@@ -1,7 +1,7 @@
 /* wiz.c */
 
 /*-----------------------------------------------------------------------
-    Developed by: #undef teamname
+    Developed by: #undef TEAMNAME
     Based on template code provided by Harald Sondergard for COMP90045.
     Provides a driver for the pretty printer interface.
 
@@ -16,6 +16,7 @@
 #include    "ast.h"
 #include    "std.h"
 #include    "pretty.h"
+#include "helper.h"
 #include    "missing.h"
 
 const char  *progname;
@@ -25,8 +26,8 @@ Program     *parsed_program = NULL;
 extern FILE *yyin;
 
 static void usage(void);
-void        report_error_and_exit(const char *msg);
-void        *checked_malloc(int num_bytes);
+// void        report_error_and_exit(const char *msg);
+// void        *checked_malloc(int num_bytes);
 
 int
 main(int argc, char **argv) {
@@ -78,21 +79,21 @@ usage(void) {
     printf("usage: wiz [-p] iz_source_file\n");
 }
 
-void
-report_error_and_exit(const char *msg) {
-    fprintf(stderr, "Error: %s\n", msg);
-    exit(EXIT_FAILURE);
-}
+// void
+// report_error_and_exit(const char *msg) {
+//     fprintf(stderr, "Error: %s\n", msg);
+//     exit(EXIT_FAILURE);
+// }
 
-void *
-checked_malloc(int num_bytes) {
+// void *
+// checked_malloc(int num_bytes) {
 
-    void *addr;
+//     void *addr;
 
-    addr = malloc((size_t) num_bytes);
-    if (addr == NULL) 
-        report_error_and_exit("Out of memory");
-    return addr;
-}
+//     addr = malloc((size_t) num_bytes);
+//     if (addr == NULL) 
+//         report_error_and_exit("Out of memory");
+//     return addr;
+// }
 
 /*---------------------------------------------------------------------*/

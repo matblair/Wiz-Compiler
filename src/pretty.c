@@ -1,6 +1,6 @@
 /*                             pretty.c                                */
 /*-----------------------------------------------------------------------
-    Developed by: #undef teamname
+    Developed by: #undef TEAMNAME
     Based on template code provided by Harald Sondergard for COMP90045.
     Provides a pretty printer for the Wiz programming language. Takes
     an abstract syntax tree as defined in ast.h and prints according
@@ -17,6 +17,63 @@
 #include <string.h>
 #include "ast.h"
 #include "pretty.h"
+#include "helper.h"
+
+/*----------------------------------------------------------------------
+    Definitions for functions that organise the printing process and
+    sort the procs to print.  
+-----------------------------------------------------------------------*/
+
+Procs* sort_procs(Procs *procs);
+void print_procedures(FILE *fp, Procs *processes);
+void print_program(FILE *, Program *);
+
+/*----------------------------------------------------------------------
+    Definitions for functions that are responsibile for managing the 
+    printing of a procedure
+-----------------------------------------------------------------------*/
+
+void print_header(FILE *fp, Header *header);
+void print_params(FILE *fp, Params *params);
+void print_body(FILE *fp, Body *body);
+
+/*----------------------------------------------------------------------
+    Definitions for functions that are responsible for printing 
+    declarations
+-----------------------------------------------------------------------*/
+
+void print_array_decl(FILE *fp, Intervals *intervals);
+void print_declarations(FILE *fp, Decls *declarations, int indents);
+
+/*----------------------------------------------------------------------
+    Definitions for functions that are responsible for printing 
+    statements 
+-----------------------------------------------------------------------*/
+
+void print_conds(FILE *fp, Cond *info, int indents);
+void print_while(FILE *fp, While *loop, int indents);
+void print_statement(FILE *fp, Stmt *statement, int indents);
+void print_statements(FILE *fp, Stmts *statements, int indents);
+
+/*----------------------------------------------------------------------
+    Definitions for functions that are responsible for printing 
+    individual expressions and constants 
+-----------------------------------------------------------------------*/
+    
+void print_binop(FILE *fp, Expr *bin_expr, int prec);
+void print_unop(FILE *fp, Expr *unop_expr, int prec);
+void print_exprs(FILE *fp, Exprs *args);
+void print_expr_list(FILE *fp, Exprs *elems);
+void print_expression(FILE *fp, Expr *expr, int prec);
+void print_constant(FILE *fp, Constant *cons);
+
+/*----------------------------------------------------------------------
+    Definitions for utility functions to help with printing minimal
+    brackets and printing correct indentation
+-----------------------------------------------------------------------*/
+
+void print_indents(FILE *fp, int indents);
+BOOL is_commutative(Expr *expr);
 
 /*-----------------------------------------------------------------------
     Defines our start precedence and indentation. Increasing precedence
@@ -64,7 +121,7 @@ void print_procedures(FILE *fp, Procs *procs){
     }
 
     // Create the array of procedures to then sort
-    Proc **proc_ptrs = (Proc **) malloc(num_procs * sizeof(Proc *));
+    Proc **proc_ptrs = (Proc **) checked_malloc(num_procs * sizeof(Proc *));
     Procs *c = procs;
     int i=0;
     for(i=0; i<num_procs; i++){
@@ -78,6 +135,12 @@ void print_procedures(FILE *fp, Procs *procs){
 
     // Go through the array and print each procedure
     for(i=0; i<num_procs; i++){
+        // If we follow a previous proc then give ourselves 
+        // some breathing room. 
+        if(i>0){
+            fprintf(fp, "\n");
+        }
+        
         // Get the current process
         Proc *current = proc_ptrs[i];
 
@@ -86,7 +149,7 @@ void print_procedures(FILE *fp, Procs *procs){
         // Print the body
         print_body(fp, current->body);
         // Print a new line
-        fprintf(fp, "end\n\n");
+        fprintf(fp, "end\n");
     }
 
     // Free all the pointers like a responsible c programmer.
@@ -380,7 +443,7 @@ void print_binop(FILE *fp, Expr *bin_expr, int prec){
 
     // If the left expression is commutative, then we fake the precedence to 
     // ensure minimum bracketing otherwise print nomrally.
-    if(!is_commutative(bin_expr->e1)){
+    if(!is_commutative(bin_expr->e1) && !is_commutative(bin_expr->e2)){
         print_expression(fp, bin_expr->e1, binopprec[bin_expr->binop]+1);
     } else {
         print_expression(fp, bin_expr->e1, binopprec[bin_expr->binop]);
@@ -418,7 +481,7 @@ void print_unop(FILE *fp, Expr *unop_expr, int prec){
     else prec = unopprec[unop_expr->unop];
 
     // Print the expression and pass on precedence. 
-    fprintf(fp,"%s ", unopname[unop_expr->unop]);
+    fprintf(fp,"%s", unopname[unop_expr->unop]);
     print_expression(fp, unop_expr->e1,prec);
 
     // Close bracket if required

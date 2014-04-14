@@ -1,7 +1,7 @@
 /* ast.h */
 
 /*-----------------------------------------------------------------------
-    Developed by: #undef teamname
+    Developed by: #undef TEAMNAME
     Based on template code provided by Harald Sondergard for COMP90045.
     Provides full abstract syntax tree implementation for the Wiz 
     programming language. 
@@ -46,7 +46,7 @@ typedef struct interval     Interval;
 typedef enum {
     BINOP_ADD, BINOP_SUB, BINOP_MUL, BINOP_DIV,
     BINOP_OR, BINOP_AND,
-    BINOP_EQ, BINOP_NTEQ, BINOP_LT, BINOP_LTEQ, BINOP_GTEQ, BINOP_GT
+    BINOP_EQ, BINOP_NTEQ, BINOP_LT, BINOP_LTEQ, BINOP_GT, BINOP_GTEQ
 } BinOp;
 
 // Array Values
@@ -63,7 +63,7 @@ typedef enum {
 } UnOp;
 
 // Array Values
-#define UNOP_NAMES "-", "not"
+#define UNOP_NAMES "-", "not "
 #define UNOP_PRECEDENCE 6, 2
 
 // External definitions for array access
