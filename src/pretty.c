@@ -24,9 +24,7 @@
     sort the procs to print.  
 -----------------------------------------------------------------------*/
 
-Procs* sort_procs(Procs *procs);
 void print_procedures(FILE *fp, Procs *processes);
-void print_program(FILE *, Program *);
 
 /*----------------------------------------------------------------------
     Definitions for functions that are responsibile for managing the 
