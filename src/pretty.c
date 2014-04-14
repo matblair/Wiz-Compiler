@@ -73,7 +73,8 @@ void print_constant(FILE *fp, Constant *cons);
 -----------------------------------------------------------------------*/
 
 void print_indents(FILE *fp, int indents);
-BOOL is_commutative(Expr *expr);
+BOOL is_associative_arithmetic(Expr *expr);
+BOOL is_associative_logical(Expr *expr);
 
 /*-----------------------------------------------------------------------
     Defines our start precedence and indentation. Increasing precedence
@@ -439,14 +440,16 @@ void print_binop(FILE *fp, Expr *bin_expr, int prec){
     // level of precedence accounted and should set the precedence
     // thusly. 
     if(brackets) fprintf(fp, "(");
-    else prec = binopprec[bin_expr->binop];
+    prec = binopprec[bin_expr->binop];
 
-    // If the left expression is commutative, then we fake the precedence to 
-    // ensure minimum bracketing otherwise print nomrally.
-    if(!is_commutative(bin_expr->e1) && !is_commutative(bin_expr->e2)){
-        print_expression(fp, bin_expr->e1, binopprec[bin_expr->binop]+1);
+    // Print the left expression, if the left function is a nonassociative 
+    // logical function (i.e. greater than, equal to etc) then we spoof the
+    // precedence level to force the expression to bracket itself. Otherwise
+    // print as normal.
+    if(is_associative_logical(bin_expr)){
+        print_expression(fp, bin_expr->e1, prec+1);
     } else {
-        print_expression(fp, bin_expr->e1, binopprec[bin_expr->binop]);
+        print_expression(fp, bin_expr->e1, prec);
     }
 
     // Print the binary operation name
@@ -456,7 +459,7 @@ void print_binop(FILE *fp, Expr *bin_expr, int prec){
     // print brackets to handle cases like 24/(6/2). Therefore we spoof
     // the precedence level to force the expression to bracket itself.
     // otherwise print as normal
-    if(!is_commutative(bin_expr)){
+    if(is_associative_arithmetic(bin_expr) || is_associative_logical(bin_expr)){
         print_expression(fp, bin_expr->e2, prec+1);
     } else {
         print_expression(fp, bin_expr->e2, prec);
@@ -478,7 +481,7 @@ void print_unop(FILE *fp, Expr *unop_expr, int prec){
     // level of precedence accounted and should set the precedence
     // thusly. 
     if(brackets) fprintf(fp, "(");
-    else prec = unopprec[unop_expr->unop];
+    prec = unopprec[unop_expr->unop];
 
     // Print the expression and pass on precedence. 
     fprintf(fp,"%s", unopname[unop_expr->unop]);
@@ -520,11 +523,24 @@ void print_constant(FILE *fp, Constant *cons){
     Functions to help with printing minimal
     brackets and printing correct indentation
 -----------------------------------------------------------------------*/
-// A function to help return whether or not a function is comutative. For 
-// the purpose of this language, we are only concerned with multiplication
-// and addition.
-BOOL is_commutative(Expr *expr){
+// A function to help return whether or not a arithmetic expression 
+// is comutative. For the purpose of this language, we are only concerned 
+// with multiplication and addition. We include 
+BOOL is_associative_arithmetic(Expr *expr){
     if(expr->binop == BINOP_ADD || expr->binop == BINOP_MUL){
+        return FALSE;
+    } else {
+        return TRUE;
+    }
+}
+
+// A function to help return whether or not a logical expression 
+// is comutative. For the purpose of this language, we are only concerned 
+// with the comparison operators
+BOOL is_associative_logical(Expr *expr){
+   if(expr->binop == BINOP_EQ || expr->binop == BINOP_NTEQ ||
+        expr->binop == BINOP_LT || expr->binop == BINOP_LTEQ ||
+        expr->binop == BINOP_GT || expr->binop == BINOP_GTEQ){
         return TRUE;
     } else {
         return FALSE;
