@@ -638,7 +638,7 @@ expr
           $$->e1 = NULL;
           $$->e2 = NULL;
         }
-    |  STRING_TOKEN
+    | STRING_TOKEN
         {
           $$ = allocate(sizeof(struct expr));
           $$->lineno = ln;
@@ -648,7 +648,7 @@ expr
           $$->e1 = NULL;
           $$->e2 = NULL;
         }
-    |  FLOAT_TOKEN
+    | FLOAT_TOKEN
             {
               $$ = allocate(sizeof(struct expr));
               $$->lineno = ln;

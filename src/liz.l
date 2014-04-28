@@ -61,7 +61,7 @@ write           { return WRITE_TOKEN; }
 
 {NUM}           { yylval.int_val = atoi(yytext); 
                   return NUMBER_TOKEN; }
-{DEC}           { yylval.int_val = atof(yytext); 
+{DEC}           { yylval.float_val = atof(yytext); 
                   return FLOAT_TOKEN; }
 {ID}            { yylval.str_val = (char *) strdup(yytext); 
                   return IDENT_TOKEN; }
