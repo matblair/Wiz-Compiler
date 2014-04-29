@@ -9,12 +9,12 @@
 #include "std.h"
 
 typedef enum {
-    SYM_PARAM, SYM_DECL
+    SYM_PARAM_VAL, SYM_PARAM_REF, SYM_DECL
 } SymKind;
 
 typedef struct {
     SymKind kind;
-    void    *sym;
+    char    *id;
     int     slot;
 } symbol;
 
@@ -28,10 +28,10 @@ void *create_symtable(void *tables, char *key);
 void *find_symtable(void *tables, char *key);
 
 // Insert a symbol into a symtable. Returns false already exists
-BOOL add_symbol(void *table, char *key, symbol *sym);
+BOOL add_symbol(void *table, symbol *sym);
 
 // Find a symbol in a table, returns true if found
-symbol *find_symbol_for_key(void *table, char *key);
+symbol *find_symbol_by_id(void *table, char *id);
 
 // Debug printing
-void dump_symbol_for_key(void *table, char *key);
+void dump_symbol_for_id(void *table, char *id);

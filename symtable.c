@@ -62,42 +62,49 @@ find_symtable(void *tables, char *key) {
 // Insert a new sybmol into the symbol table. Returns FALSE if symbol already
 // exists for that key. Sets the stack slot for you!
 BOOL
-add_symbol(void *table, char *key, symbol *sym) {
+add_symbol(void *table, symbol *sym) {
     // Convert to internal representation
     symtable *t = (symtable *)table;
 
-    if (find_symbol_for_key(table, key) != NULL) {
+    if (find_symbol_by_id(table, sym->id) != NULL) {
         return FALSE;
     }
 
     sym->slot = next_stackslot(t);
-    bbst_insert(t->symbols_bbst, key, sym);
+    bbst_insert(t->symbols_bbst, sym->id, sym);
     return TRUE;
 }
 
-// Find a symbol by its key name
+// Find a symbol by its id name
 symbol *
-find_symbol_for_key(void *table, char *key) {
+find_symbol_by_id(void *table, char *id) {
     symtable *t = (symtable *) table;
-    return (symbol *) bbst_find(t->symbols_bbst, key);
+    return (symbol *) bbst_find(t->symbols_bbst, id);
 }
 
 // Dump the information for a symbol
 void
-dump_symbol_for_key(void *table, char *key) {
-    symbol *sym = find_symbol_for_key(table, key);
+dump_symbol_for_id(void *table, char *id) {
+    symbol *sym = find_symbol_by_id(table, id);
 
     if (sym == NULL) {
-        fprintf(stderr, "%10s => not in scope!\n", key);
+        fprintf(stderr, "%10s => not in scope!\n", id);
 
     } else {
         switch(sym->kind) {
-            case SYM_PARAM:
-                fprintf(stderr, "%10s => param, slot %02d\n", key, sym->slot);
+            case SYM_PARAM_VAL:
+                fprintf(stderr, "%10s => param (val), slot %02d\n",
+                        id, sym->slot);
+                break;
+
+            case SYM_PARAM_REF:
+                fprintf(stderr, "%10s => param (ref), slot %02d\n",
+                        id, sym->slot);
                 break;
 
             case SYM_DECL:
-                fprintf(stderr, "%10s => decl,  slot %02d\n", key, sym->slot);
+                fprintf(stderr, "%10s => decl,        slot %02d\n",
+                        id, sym->slot);
                 break;
         }
     }

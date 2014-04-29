@@ -43,8 +43,8 @@ generate_symtables(Program *prog) {
     for (procs = prog->procedures; procs != NULL; procs = procs->rest) {
         if (!add_symtable_for_proc(tables, procs->first)) {
             Proc *proc = procs->first;
-            fprintf(stderr, "Duplicate definition of proc %s near line %d\n",
-                    proc->header->id, proc->lineno);
+            fprintf(stderr, "[error]:%d: duplicate definition of proc %s\n",
+                    proc->lineno, proc->header->id);
         }
     }
 
@@ -58,6 +58,7 @@ add_symtable_for_proc(void *tables, Proc *proc) {
     void *table = create_symtable(tables, proc->header->id);
     symbol *new_sym;
     Params *params;
+    Param *param;
     Decls *decls;
 
     if (table == NULL) {
@@ -67,10 +68,12 @@ add_symtable_for_proc(void *tables, Proc *proc) {
     // Add the parameters
     params = proc->header->params;
     while (params != NULL) {
+        param = params->first;
+
         new_sym = checked_malloc(sizeof(symbol));
-        new_sym->kind = SYM_PARAM;
-        new_sym->sym = params->first;
-        add_symbol(table, params->first->id, new_sym); // TODO: error check!
+        new_sym->kind = param->ind == VAL_IND ? SYM_PARAM_VAL : SYM_PARAM_REF;
+        new_sym->id = param->id;
+        add_symbol(table, new_sym); // TODO: error check!
 
         params = params->rest;
     }
@@ -80,8 +83,8 @@ add_symtable_for_proc(void *tables, Proc *proc) {
     while (decls != NULL) {
         new_sym = checked_malloc(sizeof(symbol));
         new_sym->kind = SYM_DECL;
-        new_sym->sym = decls->first;
-        add_symbol(table, decls->first->id, new_sym); // TODO: error check!
+        new_sym->id = decls->first->id;
+        add_symbol(table, new_sym); // TODO: error check!
 
         decls = decls->rest;
     }
@@ -114,14 +117,14 @@ dump_symtables(void *tables, Program *prog) {
         // For the parameters
         params = proc->header->params;
         while (params != NULL) {
-            dump_symbol_for_key(table, params->first->id);
+            dump_symbol_for_id(table, params->first->id);
             params = params->rest;
         }
 
         // For the declarations
         decls = proc->body->decls;
         while (decls != NULL) {
-            dump_symbol_for_key(table, decls->first->id);
+            dump_symbol_for_id(table, decls->first->id);
             decls = decls->rest;
         }
 
