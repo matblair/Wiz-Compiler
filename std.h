@@ -19,13 +19,13 @@
 #define NORMAL_EXIT 0
 #endif
 #ifndef FALSE
-#define FALSE ((BOOL) 0)
+#define FALSE ((BOOL)(0==1))
 #endif
 #ifndef TRUE
-#define TRUE  ((BOOL) 1)
+#define TRUE  ((BOOL)(0==0))
 #endif
 #ifndef BOOL
-#define BOOL    char
+#define BOOL    int
 #endif
 
 #endif  /* STD_H */
