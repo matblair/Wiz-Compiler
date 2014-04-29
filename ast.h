@@ -268,6 +268,7 @@ struct body {
 };
 
 struct proc {
+    int      lineno;
     Header   *header;
     Body     *body;
 };

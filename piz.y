@@ -141,11 +141,12 @@ procs
       }
 
 proc
-  : PROC_TOKEN header body END_TOKEN
+  : PROC_TOKEN get_lineno header body END_TOKEN
         {
           $$ = allocate(sizeof(struct proc));
-          $$->header = $2;
-          $$->body = $3;
+          $$->lineno = $2;
+          $$->header = $3;
+          $$->body = $4;
         }
     ;
 

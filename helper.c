@@ -18,7 +18,7 @@ void report_error_and_exit(const char *msg){
 
 // Simple safe malloc funciton that will return the requested amount of 
 // memory if available otherwiuse will exit citing failure. Taken from Wiz.c
-void * checked_malloc(int num_bytes) {
+void * checked_malloc(size_t num_bytes) {
     //Memory address
     void *addr;
     // Allocate with malloc

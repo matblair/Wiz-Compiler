@@ -11,13 +11,15 @@
     For use the COMP90045 project 2014."
 -----------------------------------------------------------------------*/
 
-#include    <string.h>
-#include    <stdlib.h>
-#include    "ast.h"
-#include    "std.h"
-#include    "pretty.h"
+#include <string.h>
+#include <stdlib.h>
+
+#include "ast.h"
+#include "std.h"
+#include "analyse.h"
+#include "pretty.h"
 #include "helper.h"
-#include    "missing.h"
+#include "missing.h"
 
 const char  *progname;
 const char  *iz_infile;
@@ -68,7 +70,7 @@ main(int argc, char **argv) {
     if (pretty_print_only) 
         pretty_prog(fp, parsed_program);
     else
-        report_error_and_exit("Unable to generate code... yet");
+        analyse_prog(parsed_program);
     return 0;
 }
 

@@ -1,13 +1,12 @@
-HDR =	wiz.h piz.h ast.h pretty.h std.h missing.h helper.h dict.h
+HDR =	wiz.h piz.h ast.h pretty.h std.h missing.h helper.h bbst.h symtable.h\
+        analyse.h
 
-OBJ =	wiz.o piz.o liz.o ast.o pretty.o helper.o bbst.o
+OBJ =	wiz.o piz.o liz.o ast.o pretty.o helper.o bbst.o symtable.o analyse.o
 
-CC = 	gcc -Wall
+CC = 	gcc -Wall -Wextra
 
 wiz: $(OBJ)
 	$(CC) -o wiz $(OBJ)
-
-bbst.c: dict.h helper.h std.h
 
 piz.c piz.h: piz.y ast.h std.h missing.h helper.h
 	bison --debug -v -d piz.y -o piz.c

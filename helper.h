@@ -10,4 +10,4 @@
 -----------------------------------------------------------------------*/
 
 void    report_error_and_exit(const char *msg);  
-void    *checked_malloc(int num_bytes);
+void    *checked_malloc(size_t num_bytes);
