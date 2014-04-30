@@ -18,7 +18,7 @@ void print_dupe_symbol_errors(char *id, Type t1, Type t2, int duplicate, int ori
 void print_assign_error(Assign *a, Type left, Type right, int line_no);
 void print_if_error(Expr *e, Type c, int line_no);
 void print_while_error(Expr *e, Type c, int line_no);
-void print_undefined_variable_error(Expr *e, int line_no);
+void print_undefined_variable_error(Expr *e, Expr *parent, int line_no);
 void print_func_pmismatch_error(Function *f, Params *fcallee, int line_no,
 	int expect_no, int call_no);
 void print_array_dims_error(Expr *e, int expected, int actual, int line_no);

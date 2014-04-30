@@ -45,7 +45,8 @@ char* get_type_string(symbol *sym);
 int count_list(Exprs *l);
 int count_params(Params *l);
 int count_array(Intervals *l);
-Type get_expr_type(Expr *e, sym_table *table, char *scope_id, int line_no);
+Type get_expr_type(Expr *e, Expr *parent,
+    sym_table *table, char *scope_id, int line_no);
 Type get_type(symbol *sym);
 Type get_const_type(Expr *e);
 BOOL check_int_equiv(Type t);
@@ -67,7 +68,7 @@ FUNCTIONS!!!! cOMMENT THIS LATER
 BOOL analyse(Program *prog){
     //Generate the symbol table
     isValid = TRUE;
-    sym_table *table = gen_sym_table(prog);
+     sym_table *table = gen_sym_table(prog);
 
     //Perform simple analysis
     check_main(table);
@@ -211,8 +212,8 @@ void generate_params_symbols(Header *h, scope *sc, sym_table *prog){
 
 void analyse_assign(Assign *a, sym_table *table, char *scope_id, int line_no){
     //Get the type of the left and right analysis then ensure they match.
-    Type left = get_expr_type(a->asg_ident, table, scope_id, line_no);
-    Type right = get_expr_type(a->asg_expr, table, scope_id, line_no);
+    Type left = get_expr_type(a->asg_ident, NULL, table, scope_id, line_no);
+    Type right = get_expr_type(a->asg_expr, NULL, table, scope_id, line_no);
     
     //Check they are both valid and equivalent 
     if(left == INVALID_TYPE || right == INVALID_TYPE){
@@ -231,7 +232,7 @@ void analyse_assign(Assign *a, sym_table *table, char *scope_id, int line_no){
 
 void analyse_if(Cond *ifcond, sym_table *table, char *scope_id, int line_no){
     //Analyse condition
-    Type c = get_expr_type(ifcond->cond, table, scope_id, line_no);
+    Type c = get_expr_type(ifcond->cond, NULL, table, scope_id, line_no);
     if(c != BOOL_TYPE){
         print_if_error(ifcond->cond, c, line_no);
         isValid = FALSE;
@@ -245,7 +246,7 @@ void analyse_if(Cond *ifcond, sym_table *table, char *scope_id, int line_no){
 
 void analyse_while(While *loop, sym_table *table, char *scope_id, int line_no){
     //Analyse condition
-    Type c = get_expr_type(loop->cond, table, scope_id, line_no);
+    Type c = get_expr_type(loop->cond, NULL, table, scope_id, line_no);
     if(c != BOOL_TYPE){
         print_while_error(loop->cond, c, line_no);
         isValid = FALSE;
@@ -257,14 +258,14 @@ void analyse_while(While *loop, sym_table *table, char *scope_id, int line_no){
 void analyse_read(Expr *read, sym_table *table, char *scope_id, int line_no){
     //We just need to check the type is valid, so we try get the symbol and if
     //we fail then we can't read.
-    get_expr_type(read, table, scope_id, line_no);
+    get_expr_type(read, NULL, table, scope_id, line_no);
 }
 
 void analyse_write(Expr *write, sym_table *table, char *scope_id, int line_no){
     //We just need to check the type is valid or that it is a constant,
     // so we try get the symbol and if we fail then we can't write.
     if(write->kind != EXPR_CONST){
-         get_expr_type(write, table, scope_id, line_no);
+         get_expr_type(write, NULL, table, scope_id, line_no);
     }
 }
 
@@ -288,7 +289,7 @@ analyse_function(Function *f, sym_table *prog, char *scope_id, int line_no){
         while(fcallee!=NULL){
             Expr *e = fcaller->first;
             Param *p = fcallee->first;
-            Type caller = get_expr_type(e, prog, scope_id, line_no);
+            Type caller = get_expr_type(e, NULL, prog, scope_id, line_no);
             if(caller != p->type && p->ind == VAL_IND){
                 if((caller == INT_TYPE) && (p->type == FLOAT_TYPE)){
                     // This is valid, we can cast an int val into a float val
@@ -331,7 +332,9 @@ char* get_type_string(symbol *sym){
     return type;
 }
 
-Type get_expr_type(Expr *e, sym_table *table, char *scope_id, int line_no){
+Type get_expr_type(Expr *e, Expr *parent,
+    sym_table *table, char *scope_id, int line_no){
+
     //Find the type of an expression
     ExprKind kind = e->kind;
     // Switch on kind to print
@@ -342,7 +345,7 @@ Type get_expr_type(Expr *e, sym_table *table, char *scope_id, int line_no){
                 return get_type(retrieve_symbol(e->id, scope_id, table));
             } else {
                  //Not good. Let the user know.
-                print_undefined_variable_error(e, line_no);
+                print_undefined_variable_error(e, parent, line_no);
                 isValid = FALSE;
                 e->inferred_type = INVALID_TYPE;
                 return INVALID_TYPE;
@@ -354,14 +357,14 @@ Type get_expr_type(Expr *e, sym_table *table, char *scope_id, int line_no){
         case EXPR_BINOP:
             //We need the types of each expression
             //Then we determine the type if allowed using the binop
-            return get_binop_type(get_expr_type(e->e1, table, scope_id,
-               line_no),get_expr_type(e->e2, table, scope_id, line_no),e->binop,
-               line_no, e);
+            return get_binop_type(get_expr_type(e->e1, e, table, scope_id,
+                line_no),get_expr_type(e->e2, e, table, scope_id, line_no),
+                e->binop, line_no, e);
             break;
         case EXPR_UNOP:
             //Get the type of the expression
             //Then we determine the type if allowed using the binop
-            return get_unop_type(get_expr_type(e->e1, table, scope_id, 
+            return get_unop_type(get_expr_type(e->e1, e,table, scope_id, 
                 line_no),e->unop, line_no, e);
             break;
         case EXPR_ARRAY:
@@ -381,7 +384,7 @@ Type get_expr_type(Expr *e, sym_table *table, char *scope_id, int line_no){
                         count_list(e->indices), line_no);
                     isValid = FALSE;
                 } else {
-                    print_undefined_variable_error(e, line_no);
+                    print_undefined_variable_error(e, NULL, line_no);
                 }
                 e->inferred_type = INVALID_TYPE;
                 return INVALID_TYPE;
@@ -398,7 +401,7 @@ void validate_array_indices(Exprs *indices, char *id,
     int p_num = 1;
     while(indices!=NULL){
         Expr *e = indices->first;
-        Type t = get_expr_type(e, table, scope_id, line_no);
+        Type t = get_expr_type(e, NULL, table, scope_id, line_no);
         if(t!=INT_TYPE){
             print_array_index_error(indices, id, line_no, p_num, t);
         } 

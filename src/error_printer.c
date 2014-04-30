@@ -42,12 +42,16 @@ void print_missing_main_error(){
 		BOLDCYAN "main" BOLDWHITE" function.\n\n");
 }
 
-void print_undefined_variable_error(Expr *e, int line_no){
+void print_undefined_variable_error(Expr *e, Expr *parent,  int line_no){
   //Not good. Let the user know.
 	fprintf(stderr, BOLDWHITE "%d " BOLDRED "error: " BOLDWHITE 
 		"in expression:\n" KNRM "", line_no);
 	print_indents(stderr, 4);
-	print_expression(stderr, e, 0);
+	if(parent == NULL){
+		print_expression(stderr, e, 0);	
+	} else {
+		print_expression(stderr, parent, 0);
+	}
 	fprintf(stderr,";\n");
 	fprintf(stderr, "Variable " KYEL "%s" KNRM" is undefined.\n\n",e->id);
 }
