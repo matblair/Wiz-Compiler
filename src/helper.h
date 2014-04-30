@@ -8,6 +8,4 @@
     scaffolding code in wiz.c
 
 -----------------------------------------------------------------------*/
-
-void    report_error_and_exit(const char *msg);  
 void    *checked_malloc(int num_bytes);

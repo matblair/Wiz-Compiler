@@ -8,7 +8,6 @@
 #include <stdio.h>
 #include "std.h"
 #include "ast.h"
-
 /*----------------------------------------------------------------------
     Structures and enums needed from other files.  
 -----------------------------------------------------------------------*/
@@ -42,9 +41,9 @@ typedef struct symbol_table {
 // For generating table
 sym_table* initialize_sym_table();
 BOOL 		insert_symbol(sym_table *prob, symbol *sym, scope *s);
-scope* 		create_scope(void *table, char *scope_id, void *p);
+scope*      create_scope(void *table, char *scope_id, void *p, int line_no);
 symbol*    	retrieve_symbol(char *id, char *scope_id, sym_table *prog);
 scope*      find_scope(char *scope_id, sym_table *prog);
 void 		dump_symbol_table(sym_table *prog);
 void 		free_tree(sym_table *prog);
-char* get_symbol_id(symbol *a);
+char* 		get_symbol_id(symbol *a);

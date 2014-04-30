@@ -20,6 +20,9 @@
 #include    "codegen.h"
 #include    "analyse.h"
 #include    "missing.h"
+#include    "pretty.h"
+#include "error_printer.h"
+
 
 const char  *progname;
 const char  *iz_infile;
@@ -72,8 +75,9 @@ main(int argc, char **argv) {
     else
         if(analyse(parsed_program)){
             generate_code(parsed_program,fp);
-        }
-        report_error_and_exit("Invalid Program.");
+        } else {    
+            report_error_and_exit("Invalid Program.");
+        }   
     return 0;
 }
 

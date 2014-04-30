@@ -55,17 +55,7 @@ int comp_scope(const void *key, const void *b){
 	return (strcmp(id_a, id_b));	
 }
 
-char* get_symbol_id(symbol *a){
-	if(a->sym_type == SYM_LOCAL){
-		//Then we have a decl
-		Decl *d = (Decl *) a->sym_value;
-		return d->id;
-	} else {
-		//We have a param
-		Param *p = (Param *) a->sym_value;
-		return p->id;
-	}
-}
+
 
 int comp_symbol(const void *key, const void *b){
 	if(b == NULL){
@@ -79,7 +69,7 @@ int comp_symbol(const void *key, const void *b){
     return (strcmp(id_a, id_b));	
 }
 
-scope* create_scope(void *table, char *scope_id, void *p){
+scope* create_scope(void *table, char *scope_id, void *p, int line_no){
 	//First check if the scope exists already
 	scope *s = (scope *) bbst_find_node(scope_id, table, comp_scope);
 	if(s != NULL){
@@ -91,6 +81,7 @@ scope* create_scope(void *table, char *scope_id, void *p){
 	new_scope->table = bbst_intialize();
 	new_scope->id = scope_id;
 	new_scope->params = p;
+	new_scope->line_no = line_no;
 	bbst_insert(table, scope_id, new_scope, comp_scope);
 	return new_scope;
 }
@@ -106,6 +97,19 @@ BOOL insert_symbol(sym_table *prog, symbol *sym, scope *s){
 		return TRUE;
 	}
 }
+
+char* get_symbol_id(symbol *a){
+	if(a->sym_type == SYM_LOCAL){
+		//Then we have a decl
+		Decl *d = (Decl *) a->sym_value;
+		return d->id;
+	} else {
+		//We have a param
+		Param *p = (Param *) a->sym_value;
+		return p->id;
+	}
+}
+
 
 symbol* retrieve_symbol(char *id, char *scope_id, sym_table *prog){
 	//First find the scope;
