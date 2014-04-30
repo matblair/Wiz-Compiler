@@ -110,7 +110,6 @@ int proc_comparison(const void *a, const void *b){
 // Simple function responsible for sorting all the procedures and 
 // then calling the appropriate printing function on each procedure
 void print_procedures(FILE *fp, Procs *procs){
-
     // Go through and count the number of procedures
     int num_procs=1;
     Procs *rest = procs->rest;

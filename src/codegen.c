@@ -12,4 +12,6 @@
    Our main function responsible for generating all the code.
 -----------------------------------------------------------------------*/
 
-void generate_code(Program *prog);
+void generate_code(Program *prog, FILE *fp){
+	
+}

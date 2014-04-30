@@ -16,7 +16,9 @@
 #include    "ast.h"
 #include    "std.h"
 #include    "pretty.h"
-#include "helper.h"
+#include    "helper.h"
+#include    "codegen.h"
+#include    "analyse.h"
 #include    "missing.h"
 
 const char  *progname;
@@ -68,7 +70,10 @@ main(int argc, char **argv) {
     if (pretty_print_only) 
         pretty_prog(fp, parsed_program);
     else
-        report_error_and_exit("Unable to generate code... yet");
+        if(analyse(parsed_program)){
+            generate_code(parsed_program,fp);
+        }
+        report_error_and_exit("Invalid Program.");
     return 0;
 }
 
@@ -78,22 +83,5 @@ static void
 usage(void) {
     printf("usage: wiz [-p] iz_source_file\n");
 }
-
-// void
-// report_error_and_exit(const char *msg) {
-//     fprintf(stderr, "Error: %s\n", msg);
-//     exit(EXIT_FAILURE);
-// }
-
-// void *
-// checked_malloc(int num_bytes) {
-
-//     void *addr;
-
-//     addr = malloc((size_t) num_bytes);
-//     if (addr == NULL) 
-//         report_error_and_exit("Out of memory");
-//     return addr;
-// }
 
 /*---------------------------------------------------------------------*/

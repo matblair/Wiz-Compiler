@@ -13,4 +13,4 @@
     External Functions that will be accessed by other C files.  
 -----------------------------------------------------------------------*/
 
-void generate_code(Program *prog);
+void generate_code(Program *prog, FILE *fp);

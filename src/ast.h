@@ -86,8 +86,7 @@ extern const char *valnames[];
 
 
 typedef enum {
-    BOOL_TYPE, INT_TYPE, FLOAT_TYPE, INT_ARRAY_TYPE, 
-    FLOAT_ARRAY_TYPE, BOOL_ARRAY_TYPE, STRING_CONST
+    BOOL_TYPE, INT_TYPE, FLOAT_TYPE, STRING_CONST, INVALID_TYPE
 } Type;
 
 // Array Values
@@ -221,7 +220,7 @@ struct func {
 
 typedef union {
     Assign    assign;
-    Stmts     *stmts;
+    // Stmts     *stmts;
     Cond      cond;
     Expr      *read;
     Expr      *write;
@@ -260,6 +259,7 @@ struct params {
 struct header {
    char      *id;
    Params    *params;
+   int       line_no;
 };
 
 struct body {

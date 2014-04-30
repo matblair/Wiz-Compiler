@@ -150,11 +150,12 @@ proc
     ;
 
 header 
-    : IDENT_TOKEN '(' parameter_list ')'
+    : IDENT_TOKEN '(' parameter_list ')' get_lineno
         {
           $$ = allocate(sizeof(struct header));
           $$->id = $1;
           $$->params = $3;
+          $$->line_no = $5;
         } 
       ;
 
@@ -254,7 +255,7 @@ decl
           $$->lineno = ln;
           $$->id = $2;
           $$->array = $4;
-          $$->type = INT_ARRAY_TYPE;
+          $$->type = INT_TYPE;
         }
     | FLOAT_TOKEN IDENT_TOKEN '[' intervals ']' ';'
         {
@@ -262,7 +263,7 @@ decl
           $$->lineno = ln;
           $$->id = $2;
           $$->array = $4;
-          $$->type = FLOAT_ARRAY_TYPE;
+          $$->type = FLOAT_TYPE;
         }
     | BOOL_TOKEN IDENT_TOKEN '[' intervals ']' ';'
         {
@@ -270,7 +271,7 @@ decl
           $$->lineno = ln;
           $$->id = $2;
           $$->array = $4;
-          $$->type = BOOL_ARRAY_TYPE;
+          $$->type = BOOL_TYPE;
         }
     | INT_TOKEN IDENT_TOKEN ';'
         {
