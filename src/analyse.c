@@ -42,9 +42,12 @@ void analyse_expression(Expr *expr, sym_table *table,
 
 //Helper functions
 char* get_type_string(symbol *sym);
-int count_list(void *l);
+int count_list(Exprs *l);
+int count_params(Params *l);
+int count_array(Intervals *l);
 Type get_expr_type(Expr *e, sym_table *table, char *scope_id, int line_no);
 Type get_type(symbol *sym);
+Type get_const_type(Expr *e);
 BOOL check_int_equiv(Type t);
 BOOL check_float_equiv(Type t);
 Type get_binop_type(Type t1, Type t2, BinOp b, int line_no, Expr *e);
@@ -286,7 +289,25 @@ analyse_function(Function *f, sym_table *prog, char *scope_id, int line_no){
             Expr *e = fcaller->first;
             Param *p = fcallee->first;
             Type caller = get_expr_type(e, prog, scope_id, line_no);
-            if(caller != p->type && caller != INVALID_TYPE){
+            if(caller != p->type && p->ind == VAL_IND){
+                if((caller == INT_TYPE) && (p->type == FLOAT_TYPE)){
+                    // This is valid, we can cast an int val into a float val
+                }else {
+                    //Then the parameter calls are incorrect
+                    print_func_ptype_error(par_num, caller, p->type, f, line_no);
+                    isValid = FALSE;
+                }
+            } else if(caller != p->type && p->ind == REF_IND){
+                if((caller == FLOAT_TYPE) && (p->type == INT_TYPE)){
+                    // This is valid, we can cast an int into a float to store 
+                    // in the ref.
+                } else {
+                    //Then the parameter calls are incorrect
+                    print_func_ptype_error(par_num, caller, p->type, f, line_no);
+                    isValid = FALSE;
+                }
+            } else if(caller != p->type && caller != INVALID_TYPE){
+                //Then the parameter calls are incorrect
                 print_func_ptype_error(par_num, caller, p->type, f, line_no);
                 isValid = FALSE;
             }
@@ -323,11 +344,12 @@ Type get_expr_type(Expr *e, sym_table *table, char *scope_id, int line_no){
                  //Not good. Let the user know.
                 print_undefined_variable_error(e, line_no);
                 isValid = FALSE;
+                e->inferred_type = INVALID_TYPE;
                 return INVALID_TYPE;
             }
             break;
         case EXPR_CONST:
-            return  e->constant.type;
+            return get_const_type(e);
             break;
         case EXPR_BINOP:
             //We need the types of each expression
@@ -349,17 +371,19 @@ Type get_expr_type(Expr *e, sym_table *table, char *scope_id, int line_no){
                 symbol *a = retrieve_symbol(e->id, scope_id, table);
                 validate_array_indices(e->indices, e->id, 
                     line_no, table, scope_id);
-                return get_type(a);
+                e->inferred_type = get_type(a);
+                return e->inferred_type;
             } else {
                 symbol *a = retrieve_symbol(e->id, scope_id, table);
                 if(a != NULL){
                     Decl *d = (Decl *) a->sym_value;
-                    print_array_dims_error(e, count_list(d->array), 
+                    print_array_dims_error(e, count_array(d->array), 
                         count_list(e->indices), line_no);
                     isValid = FALSE;
                 } else {
                     print_undefined_variable_error(e, line_no);
                 }
+                e->inferred_type = INVALID_TYPE;
                 return INVALID_TYPE;
             }
             return INVALID_TYPE;
@@ -385,6 +409,7 @@ void validate_array_indices(Exprs *indices, char *id,
 
 Type get_binop_type(Type t1, Type t2, BinOp b, int line_no, Expr *e){
     if(t1 == INVALID_TYPE || t2 == INVALID_TYPE){
+        e->inferred_type = INVALID_TYPE;
         return INVALID_TYPE;
     }
     // Return appropriate type fo each class of function based on the two types
@@ -394,18 +419,22 @@ Type get_binop_type(Type t1, Type t2, BinOp b, int line_no, Expr *e){
             if (t1 != BOOL_TYPE || t2 != BOOL_TYPE){
                 print_binop_error(e, line_no, t1, t2, "both be boolean types");
                 isValid = FALSE;
+                e->inferred_type = INVALID_TYPE;
                 return INVALID_TYPE;
             } else {
+                e->inferred_type = BOOL_TYPE;
                 return BOOL_TYPE;
             }
 
         case BINOP_EQ:
         case BINOP_NTEQ:
             if( t1 == t2 ){
-            return BOOL_TYPE;
+                e->inferred_type = BOOL_TYPE;
+                return BOOL_TYPE;
             } else {
                 print_binop_error(e, line_no, t1, t2, "both be equal types");
                 isValid = FALSE;
+                e->inferred_type = INVALID_TYPE;
                 return INVALID_TYPE;
             }
 
@@ -416,8 +445,10 @@ Type get_binop_type(Type t1, Type t2, BinOp b, int line_no, Expr *e){
             if( t1 == BOOL_TYPE || t2 == BOOL_TYPE){
                 print_binop_error(e, line_no, t1, t2, "both be numeric types");
                 isValid = FALSE;
+                e->inferred_type = INVALID_TYPE;
                 return INVALID_TYPE;
             } else {
+                e->inferred_type = BOOL_TYPE;
                 return BOOL_TYPE;
             }
 
@@ -429,15 +460,19 @@ Type get_binop_type(Type t1, Type t2, BinOp b, int line_no, Expr *e){
             //otherwise return float over int.
             if( t1 == BOOL_TYPE || t2 == BOOL_TYPE){
                 print_binop_error(e, line_no, t1, t2, "both be numeric types");
+                e->inferred_type = INVALID_TYPE;
                 isValid = FALSE;
                 return INVALID_TYPE;
             } else if( t1 == FLOAT_TYPE || t2 == FLOAT_TYPE){
+                e->inferred_type = FLOAT_TYPE;
                 return FLOAT_TYPE;
             } else {
+                e->inferred_type = INT_TYPE;
                 return INT_TYPE;
             }
 
         default:
+            e->inferred_type = INVALID_TYPE;
             return INVALID_TYPE;
     }
 }
@@ -448,20 +483,29 @@ Type get_unop_type(Type t, UnOp u, int line_no, Expr *e){
             if(t == BOOL_TYPE){
                 print_unop_error(e, line_no, t, "boolean");
                 isValid = FALSE;
+                e->inferred_type = INVALID_TYPE;
                 return INVALID_TYPE;
             } else {
+                e->inferred_type = t;
                 return t;
             }
         case UNOP_NOT:
             if(t != BOOL_TYPE){
                 print_unop_error(e, line_no, t, "numeric");
                 isValid = FALSE;
+                e->inferred_type = INVALID_TYPE;
                 return INVALID_TYPE;
             } else {
+                e->inferred_type = t;
                 return t;
             }
     }
-    return INT_TYPE;
+    return INVALID_TYPE;
+}
+
+Type get_const_type(Expr *e){
+    e->inferred_type = e->constant.type;
+    return e->inferred_type;
 }
 
 BOOL 
@@ -472,7 +516,7 @@ validate_array_dims(Expr *e, char *scope_id, sym_table *table, int line_no){
         return FALSE;
     } else {
         Decl *d = (Decl *) asym->sym_value;
-        return count_list(d->array) == count_list(e);
+        return count_array(d->array) == count_list(e->indices);
     }   
 }
 
@@ -487,17 +531,9 @@ Type get_type(symbol *sym){
     }
 }
 
-int count_list(void *l){
+int count_list(Exprs *l){
     int i=0;
-
-    //Given our ast, all lists that follow the structure 
-    //  struct name {
-    //      type *first
-    //      type *rest
-    //  }
-    // are equivalent in size so we can use any to count them.
-
-    Procs *p = (Procs *) l;
+    Exprs *p = (Exprs *) l;
     while(p!=NULL){
         i++;
         p = p->rest;
@@ -505,6 +541,27 @@ int count_list(void *l){
     return i;
 }
 
+int count_array(Intervals *l){
+    int i=0;
+    Intervals *p = (Intervals *) l;
+    while(p!=NULL){
+        i++;
+        p = p->rest;
+    }
+    return i;
+}
+
+
+
+int count_params(Params *l){
+    int i=0;
+    Params *p = (Params *) l;
+    while(p!=NULL){
+        i++;
+        p = p->rest;
+    }
+    return i;
+}
 
 
 
