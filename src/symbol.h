@@ -37,3 +37,5 @@ void *create_new_symtable(Procs *proc_list);
 void add_symtable_entry(void *symtable, char *proc_name, VarInfo *var_info);
 
 VarInfo *lookup_symtable(void *symtable, char *proc_name, char *var_name);
+
+Header *get_proc_header(void *symtable, char *proc_name);

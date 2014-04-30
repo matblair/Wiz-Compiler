@@ -136,4 +136,22 @@ VarInfo *lookup_symtable(void *symtable, char *proc_name, char *var_name) {
     return found_entry->info;
 }
 
+/*-----------------------------------------------------------------------
+    convenience function for obtaining header of a given procedure from
+    the symbol table
+    - if the proc given by proc_name does not exist in the table,
+      returns NULL
+-----------------------------------------------------------------------*/
 
+Header *get_proc_header(void *symtable, char *proc_name) {
+    STable *st, st_entry;
+    st = (STable*) symtable;
+    //attempt to look-up the symbol table node for proc_name
+    HASH_FIND_STR(st, proc_name, st_entry);
+    if (st_entry == NULL) {
+        //indicates entry does not exist, so reutrn NULL
+        return NULL;
+    }
+    //otherwise reutrn pointer to the Header object
+    return st_entry->header;
+}
