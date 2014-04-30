@@ -132,6 +132,7 @@ struct expr {
     Expr      *e1;          /* for unary and binary operators */
     Expr      *e2;          /* for binary operators */
     Exprs     *indices;     /* for arrays */
+    Type      *type;        /* type of the expression */
 };
 
 struct exprs {

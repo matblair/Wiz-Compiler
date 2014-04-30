@@ -12,3 +12,5 @@
 /*----------------------------------------------------------------------
     External Functions that will be accessed by other C files.  
 -----------------------------------------------------------------------*/
+
+void *semantic_analysis(Program *prog);
