@@ -7,31 +7,39 @@
 -----------------------------------------------------------------------*/
 
 #include "std.h"
+#include "ast.H"
 
 typedef enum {
-    SYM_PARAM_VAL, SYM_PARAM_REF, SYM_DECL
+    SYM_PARAM_VAL, SYM_PARAM_REF, SYM_LOCAL
 } SymKind;
+
+typedef enum {
+    SYM_BOOL, SYM_REAL, SYM_INT
+} SymType;
 
 typedef struct {
     SymKind kind;
+    SymType type;
     char    *id;
     int     slot;
-} symbol;
+} Symbol;
 
-// Create a new collection of symtables
-void *initialise_symtables(void);
+typedef struct ssymbols {
+    Symbol *first;
+    struct ssymbols *rest;
+} Symbols;
 
-// Create a new symtable, and return it
-void *create_symtable(void *tables, char *key);
+// Create a new collection of symtables for a program
+void *gen_symtables(Program *);
 
 // Find a symtable, returns true if found
 void *find_symtable(void *tables, char *key);
 
-// Insert a symbol into a symtable. Returns false already exists
-BOOL add_symbol(void *table, symbol *sym);
+// Get the size of a symtable
+int slots_needed_for_table(void *table);
 
 // Find a symbol in a table, returns true if found
-symbol *find_symbol_by_id(void *table, char *id);
+Symbol *find_symbol_by_id(void *table, char *id);
 
-// Debug printing
-void dump_symbol_for_id(void *table, char *id);
+// convert from AST type to sym type
+SymType sym_type_from_ast_type(Type t);

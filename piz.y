@@ -255,7 +255,7 @@ decl
           $$->lineno = ln;
           $$->id = $2;
           $$->array = $4;
-          $$->type = INT_ARRAY_TYPE;
+          $$->type = INT_TYPE;
         }
     | FLOAT_TOKEN IDENT_TOKEN '[' intervals ']' ';'
         {
@@ -263,7 +263,7 @@ decl
           $$->lineno = ln;
           $$->id = $2;
           $$->array = $4;
-          $$->type = FLOAT_ARRAY_TYPE;
+          $$->type = FLOAT_TYPE;
         }
     | BOOL_TOKEN IDENT_TOKEN '[' intervals ']' ';'
         {
@@ -271,7 +271,7 @@ decl
           $$->lineno = ln;
           $$->id = $2;
           $$->array = $4;
-          $$->type = BOOL_ARRAY_TYPE;
+          $$->type = BOOL_TYPE;
         }
     | INT_TOKEN IDENT_TOKEN ';'
         {

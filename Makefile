@@ -1,9 +1,10 @@
-HDR =	wiz.h piz.h ast.h pretty.h std.h missing.h helper.h bbst.h symtable.h\
-        analyse.h
+HDR =	wiz.h piz.h ast.h oztree.h pretty.h std.h missing.h helper.h bbst.h\
+        symtable.h analyse.h codegen.h
 
-OBJ =	wiz.o piz.o liz.o ast.o pretty.o helper.o bbst.o symtable.o analyse.o
+OBJ =	wiz.o piz.o liz.o ast.o pretty.o helper.o bbst.o symtable.o analyse.o\
+        codegen.o oztree.o
 
-CC = 	gcc -Wall -Wextra
+CC = 	gcc -Wall -Wextra -DDEBUG
 
 wiz: $(OBJ)
 	$(CC) -o wiz $(OBJ)

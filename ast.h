@@ -86,12 +86,11 @@ extern const char *valnames[];
 
 
 typedef enum {
-    BOOL_TYPE, INT_TYPE, FLOAT_TYPE, INT_ARRAY_TYPE, 
-    FLOAT_ARRAY_TYPE, BOOL_ARRAY_TYPE, STRING_CONST
+    BOOL_TYPE, INT_TYPE, FLOAT_TYPE, STRING_CONST, INVALID_TYPE
 } Type;
 
 // Array Values
-#define TYPE_NAMES "bool", "int", "float", "int", "float", "bool"
+#define TYPE_NAMES "bool", "int", "float"
 // External definitions for array access
 extern const char *typenames[];
 
@@ -132,6 +131,7 @@ struct expr {
     Expr      *e1;          /* for unary and binary operators */
     Expr      *e2;          /* for binary operators */
     Exprs     *indices;     /* for arrays */
+    Type      inferred_type; /* for compilation */
 };
 
 struct exprs {
