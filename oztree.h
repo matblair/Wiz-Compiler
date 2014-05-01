@@ -47,11 +47,11 @@ typedef enum {
 
 typedef enum {
     SECTION_PROLOGUE, SECTION_WRITE, SECTION_READ, SECTION_ASSIGN, SECTION_IF,
-    SECTION_WHILE, SECTION_EPILOGUE
+    SECTION_WHILE, SECTION_CALL, SECTION_EPILOGUE
 } OzCommentSection;
 
 #define COMMENTSTRS "prologue", "write", "read", "assignment", "if",\
-                    "while", "epilogue"
+                    "while", "proc call", "epilogue"
 
 extern const char *sectionnames[];
 
@@ -65,7 +65,7 @@ typedef enum {
 } OzBuiltinId;
 
 #define BUILTINNAMES "read_int",  "read_real",  "read_bool",\
-                     "print_int", "print_real", "print_bool"\
+                     "print_int", "print_real", "print_bool",\
                      "print_string"
 
 extern const char *builtinnames[];

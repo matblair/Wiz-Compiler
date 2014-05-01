@@ -16,8 +16,10 @@
 #include "helper.h"
 
 typedef struct {
-    int next_slot;
-    void *symbols_bbst;
+    int      next_slot;
+    void     *symbols_bbst;
+    Symbols* params;
+    Symbols* params_end;
 } symtable;
 
 /*-----------------------------------------------------------------------------
@@ -82,6 +84,12 @@ find_symbol_by_id(void *table, char *id) {
     return (Symbol *) bbst_find(t->symbols_bbst, id);
 }
 
+Symbols *
+param_symbols_from_table(void *table) {
+    symtable *t = (symtable *) table;
+    return t->params;
+}
+
 SymType
 sym_type_from_ast_type(Type t) {
     switch (t) {
@@ -111,6 +119,9 @@ new_symtable() {
     symtable *table = checked_malloc(sizeof(symtable));
     table->next_slot = 0;
     table->symbols_bbst = bbst_initialise();
+    table->params = NULL;
+    table->params_end = NULL;
+
     return table;
 }
 
@@ -175,16 +186,33 @@ void
 add_params_to_table(void *table, Params *params) {
     Param *param;
     Symbol *new_sym;
+    Symbols *new_syms;
+    symtable *t = (symtable *) table;
 
     while (params != NULL) {
         param = params->first;
 
+        // Create the new symbol
         new_sym = checked_malloc(sizeof(Symbol));
         new_sym->kind = param->ind == VAL_IND ? SYM_PARAM_VAL : SYM_PARAM_REF;
         new_sym->id = param->id;
         new_sym->slot = next_stackslot(table);
         new_sym->type = sym_type_from_ast_type(param->type);
-        add_symbol(table, new_sym); // TODO: error check!
+        add_symbol(table, new_sym);
+
+        // Store the new symbol at the end of the params list
+        // creates params list if needed
+        new_syms = checked_malloc(sizeof(Symbols));
+        new_syms->first = new_sym;
+        new_syms->rest = NULL;
+
+        if (t->params_end != NULL) {
+            t->params_end->rest = new_syms;
+        } else {
+            t->params = new_syms;
+        }
+
+        t->params_end = new_syms;
 
         params = params->rest;
     }
@@ -201,7 +229,7 @@ add_decls_to_table(void *table, Decls *decls) {
         new_sym->id = decls->first->id;
         new_sym->slot = next_stackslot(table);
         new_sym->type = sym_type_from_ast_type(decls->first->type);
-        add_symbol(table, new_sym); // TODO: error check!
+        add_symbol(table, new_sym);
 
         decls = decls->rest;
     }

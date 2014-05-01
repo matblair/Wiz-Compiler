@@ -41,5 +41,8 @@ int slots_needed_for_table(void *table);
 // Find a symbol in a table, returns true if found
 Symbol *find_symbol_by_id(void *table, char *id);
 
+// Get a list of the the symbols that are params
+Symbols *param_symbols_from_table(void *table);
+
 // convert from AST type to sym type
 SymType sym_type_from_ast_type(Type t);

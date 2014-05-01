@@ -13,6 +13,7 @@
 
 #define PROGENTRY "main"
 #define INDENTS "    "
+#define INSTRWIDTH (-16)
 
 /*-----------------------------------------------------------------------------
  * Function prototypes for internal functions
@@ -54,12 +55,13 @@ print_lines(FILE *fp, OzLines *lines) {
             break;
 
         case OZ_BUILTIN:
-            fprintf(fp, "call_builtin %s\n",
+            fprintf(fp, INDENTS);
+            fprintf(fp, "%*s %s\n", INSTRWIDTH, "call_builtin",
                     builtinnames[((OzBuiltin *) lines->first->val)->id]);
             break;
 
         case OZ_PROC:
-            fprintf(fp, "proc_%s\n", ((OzProc *) lines->first->val)->id);
+            fprintf(fp, "proc_%s:\n", ((OzProc *) lines->first->val)->id);
             break;
 
         case OZ_LABEL:
@@ -81,7 +83,7 @@ print_op(FILE *fp, OzOp *op) {
 
     switch(op->code) {
         case OP_CALL:
-            fprintf(fp, "call proc_%s\n", (char *)op->arg1);
+            fprintf(fp, "%*s proc_%s\n", INSTRWIDTH, "call", (char *)op->arg1);
             break;
 
         case OP_HALT:
@@ -89,165 +91,209 @@ print_op(FILE *fp, OzOp *op) {
             break;
 
         case OP_PUSH_STACK_FRAME:
-            fprintf(fp, "push_stack_frame %d\n", * (int *)op->arg1);
+            fprintf(fp, "%*s %d\n", INSTRWIDTH, "push_stack_frame",
+                    * (int *)op->arg1);
             break;
 
         case OP_POP_STACK_FRAME:
-            fprintf(fp, "pop_stack_frame %d\n", * (int *)op->arg1);
+            fprintf(fp, "%*s %d\n", INSTRWIDTH, "pop_stack_frame",
+                    * (int *)op->arg1);
             break;
 
         case OP_RETURN:
-            fprintf(fp, "return\n");
+            fprintf(fp, "%*s\n", INSTRWIDTH, "return");
+            break;
+
+        case OP_BRANCH_ON_TRUE:
+            fprintf(fp, "%*s r%d, label%d\n", INSTRWIDTH, "branch_on_true",
+                    * (int *)op->arg1, * (int *)op->arg2);
+            break;
+
+        case OP_BRANCH_ON_FALSE:
+            fprintf(fp, "%*s r%d, label%d\n", INSTRWIDTH, "branch_on_false",
+                    * (int *)op->arg1, * (int *)op->arg2);
+            break;
+
+        case OP_BRANCH_UNCOND:
+            fprintf(fp, "%*s label%d\n", INSTRWIDTH, "branch_uncond",
+                    * (int *)op->arg1);
             break;
 
         case OP_LOAD:
-            fprintf(fp, "load r%d, %d\n",
+            fprintf(fp, "%*s r%d, %d\n", INSTRWIDTH, "load",
                     * (int *)op->arg1, * (int *)op->arg2);
             break;
 
         case OP_STORE:
-            fprintf(fp, "store %d, r%d\n",
+            fprintf(fp, "%*s %d, r%d\n", INSTRWIDTH, "store",
                     * (int *)op->arg1, * (int *)op->arg2);
             break;
 
         case OP_LOAD_ADDRESS:
-            fprintf(fp, "load_address %d, r%d\n",
+            fprintf(fp, "%*s r%d, %d\n", INSTRWIDTH, "load_address",
                     * (int *)op->arg1, * (int *)op->arg2);
             break;
 
         case OP_LOAD_INDIRECT:
-            fprintf(fp, "load_indirect %d, %d\n",
+            fprintf(fp, "%*s %d, %d\n", INSTRWIDTH, "load_indirect",
                     * (int *)op->arg1, * (int *)op->arg2);
             break;
 
         case OP_STORE_INDIRECT:
-            fprintf(fp, "store_indirect %d, %d\n",
+            fprintf(fp, "%*s %d, %d\n", INSTRWIDTH, "store_indirect",
                     * (int *)op->arg1, * (int *)op->arg2);
             break;
 
         case OP_MOVE:
-            fprintf(fp, "move r%d, r%d\n",
+            fprintf(fp, "%*s r%d, r%d\n", INSTRWIDTH, "move",
                     * (int *)op->arg1, * (int *)op->arg2);
 
         case OP_INT_CONST:
-            fprintf(fp, "int_const r%d, %d\n",
+            fprintf(fp, "%*s r%d, %d\n", INSTRWIDTH, "int_const",
                     * (int *)op->arg1, * (int *)op->arg2);
             break;
 
         case OP_REAL_CONST:
-            fprintf(fp, "real_const r%d, %f\n",
+            fprintf(fp, "%*s r%d, %f\n", INSTRWIDTH, "real_const",
                     * (int *)op->arg1, * (float *)op->arg2);
             break;
 
         case OP_STRING_CONST:
-            fprintf(fp, "string_const r%d, %s\n",
+            fprintf(fp, "%*s r%d, \"%s\"\n", INSTRWIDTH, "string_const",
                     * (int *)op->arg1, (char *)op->arg2);
             break;
 
         case OP_ADD_INT:
-            fprintf(fp, "add_int r%d, r%d, r%d\n",
+            fprintf(fp, "%*s r%d, r%d, r%d\n", INSTRWIDTH, "add_int",
                     * (int *)op->arg1, * (int *)op->arg2, * (int *)op->arg3);
+            break;
+            break;
 
         case OP_ADD_REAL:
-            fprintf(fp, "add_real r%d, r%d, r%d\n",
+            fprintf(fp, "%*s r%d, r%d, r%d\n", INSTRWIDTH, "add_real",
                     * (int *)op->arg1, * (int *)op->arg2, * (int *)op->arg3);
+            break;
             
         case OP_ADD_OFFSET:
-            fprintf(fp, "add_offset r%d, r%d, r%d\n",
+            fprintf(fp, "%*s r%d, r%d, r%d\n", INSTRWIDTH, "add_offset",
                     * (int *)op->arg1, * (int *)op->arg2, * (int *)op->arg3);
+            break;
 
         case OP_SUB_INT:
-            fprintf(fp, "sub_int r%d, r%d, r%d\n",
+            fprintf(fp, "%*s r%d, r%d, r%d\n", INSTRWIDTH, "sub_int",
                     * (int *)op->arg1, * (int *)op->arg2, * (int *)op->arg3);
+            break;
 
         case OP_SUB_REAL:
-            fprintf(fp, "sub_real r%d, r%d, r%d\n",
+            fprintf(fp, "%*s r%d, r%d, r%d\n", INSTRWIDTH, "sub_real",
                     * (int *)op->arg1, * (int *)op->arg2, * (int *)op->arg3);
+            break;
             
         case OP_SUB_OFFSET:
-            fprintf(fp, "sub_offset r%d, r%d, r%d\n",
+            fprintf(fp, "%*s r%d, r%d, r%d\n", INSTRWIDTH, "sub_offset",
                     * (int *)op->arg1, * (int *)op->arg2, * (int *)op->arg3);
+            break;
 
         case OP_MUL_INT:
-            fprintf(fp, "mul_int r%d, r%d, r%d\n",
+            fprintf(fp, "%*s r%d, r%d, r%d\n", INSTRWIDTH, "mul_int",
                     * (int *)op->arg1, * (int *)op->arg2, * (int *)op->arg3);
+            break;
 
         case OP_MUL_REAL:
-            fprintf(fp, "mul_real r%d, r%d, r%d\n",
+            fprintf(fp, "%*s r%d, r%d, r%d\n", INSTRWIDTH, "mul_real",
                     * (int *)op->arg1, * (int *)op->arg2, * (int *)op->arg3);
+            break;
 
         case OP_DIV_INT:
-            fprintf(fp, "div_int r%d, r%d, r%d\n",
+            fprintf(fp, "%*s r%d, r%d, r%d\n", INSTRWIDTH, "div_int",
                     * (int *)op->arg1, * (int *)op->arg2, * (int *)op->arg3);
+            break;
 
         case OP_DIV_REAL:
-            fprintf(fp, "div_real r%d, r%d, r%d\n",
+            fprintf(fp, "%*s r%d, r%d, r%d\n", INSTRWIDTH, "div_real",
                     * (int *)op->arg1, * (int *)op->arg2, * (int *)op->arg3);
+            break;
             
         case OP_CMP_EQ_INT:
-            fprintf(fp, "cmp_eq_int r%d, r%d, r%d\n",
+            fprintf(fp, "%*s r%d, r%d, r%d\n", INSTRWIDTH, "cmp_eq_int",
                     * (int *)op->arg1, * (int *)op->arg2, * (int *)op->arg3);
+            break;
             
         case OP_CMP_NE_INT:
-            fprintf(fp, "cmp_ne_int r%d, r%d, r%d\n",
+            fprintf(fp, "%*s r%d, r%d, r%d\n", INSTRWIDTH, "cmp_ne_int",
                     * (int *)op->arg1, * (int *)op->arg2, * (int *)op->arg3);
+            break;
             
         case OP_CMP_GT_INT:
-            fprintf(fp, "cmp_gt_int r%d, r%d, r%d\n",
+            fprintf(fp, "%*s r%d, r%d, r%d\n", INSTRWIDTH, "cmp_gt_int",
                     * (int *)op->arg1, * (int *)op->arg2, * (int *)op->arg3);
+            break;
             
         case OP_CMP_GE_INT:
-            fprintf(fp, "cmp_ge_int r%d, r%d, r%d\n",
+            fprintf(fp, "%*s r%d, r%d, r%d\n", INSTRWIDTH, "cmp_ge_int",
                     * (int *)op->arg1, * (int *)op->arg2, * (int *)op->arg3);
+            break;
             
         case OP_CMP_LT_INT:
-            fprintf(fp, "cmp_lt_int r%d, r%d, r%d\n",
+            fprintf(fp, "%*s r%d, r%d, r%d\n", INSTRWIDTH, "cmp_lt_int",
                     * (int *)op->arg1, * (int *)op->arg2, * (int *)op->arg3);
+            break;
             
         case OP_CMP_LE_INT:
-            fprintf(fp, "cmp_le_int r%d, r%d, r%d\n",
+            fprintf(fp, "%*s r%d, r%d, r%d\n", INSTRWIDTH, "cmp_le_int",
                     * (int *)op->arg1, * (int *)op->arg2, * (int *)op->arg3);
+            break;
             
         case OP_CMP_EQ_REAL:
-            fprintf(fp, "cmp_eq_real r%d, r%d, r%d\n",
+            fprintf(fp, "%*s r%d, r%d, r%d\n", INSTRWIDTH, "cmp_eq_real",
                     * (int *)op->arg1, * (int *)op->arg2, * (int *)op->arg3);
+            break;
             
         case OP_CMP_NE_REAL:
-            fprintf(fp, "cmp_ne_real r%d, r%d, r%d\n",
+            fprintf(fp, "%*s r%d, r%d, r%d\n", INSTRWIDTH, "cmp_ne_real",
                     * (int *)op->arg1, * (int *)op->arg2, * (int *)op->arg3);
+            break;
             
         case OP_CMP_GT_REAL:
-            fprintf(fp, "cmp_gt_real r%d, r%d, r%d\n",
+            fprintf(fp, "%*s r%d, r%d, r%d\n", INSTRWIDTH, "cmp_gt_real",
                     * (int *)op->arg1, * (int *)op->arg2, * (int *)op->arg3);
+            break;
             
         case OP_CMP_GE_REAL:
-            fprintf(fp, "cmp_ge_real r%d, r%d, r%d\n",
+            fprintf(fp, "%*s r%d, r%d, r%d\n", INSTRWIDTH, "cmp_ge_real",
                     * (int *)op->arg1, * (int *)op->arg2, * (int *)op->arg3);
+            break;
             
         case OP_CMP_LT_REAL:
-            fprintf(fp, "cmp_lt_real r%d, r%d, r%d\n",
+            fprintf(fp, "%*s r%d, r%d, r%d\n", INSTRWIDTH, "cmp_lt_real",
                     * (int *)op->arg1, * (int *)op->arg2, * (int *)op->arg3);
+            break;
             
         case OP_CMP_LE_REAL:
-            fprintf(fp, "cmp_le_real r%d, r%d, r%d\n",
+            fprintf(fp, "%*s r%d, r%d, r%d\n", INSTRWIDTH, "cmp_le_real",
                     * (int *)op->arg1, * (int *)op->arg2, * (int *)op->arg3);
+            break;
             
         case OP_AND:
-            fprintf(fp, "and r%d, r%d, r%d\n",
+            fprintf(fp, "%*s r%d, r%d, r%d\n", INSTRWIDTH, "and",
                     * (int *)op->arg1, * (int *)op->arg2, * (int *)op->arg3);
+            break;
             
         case OP_OR:
-            fprintf(fp, "or r%d, r%d, r%d\n",
+            fprintf(fp, "%*s r%d, r%d, r%d\n", INSTRWIDTH, "or",
                     * (int *)op->arg1, * (int *)op->arg2, * (int *)op->arg3);
+            break;
 
         case OP_NOT:
-            fprintf(fp, "not r%d, r%d\n",
+            fprintf(fp, "%*s r%d, r%d\n", INSTRWIDTH, "not",
                     * (int *)op->arg1, * (int *)op->arg2);
+            break;
 
 
         case OP_INT_TO_REAL:
             fprintf(fp, "int_to_real r%d, r%d\n",
                     * (int *)op->arg1, * (int *)op->arg2);
+            break;
 
         default:
             report_error_and_exit("operation not yet implemented!");
