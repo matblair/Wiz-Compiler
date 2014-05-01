@@ -39,6 +39,7 @@ void analyse_function(Function *function, sym_table *table,
      char *scope_id, int line_no);
 void analyse_expression(Expr *expr, sym_table *table, 
      char *scope_id, int line_no);
+void check_unused_symbols(sym_table *table, Program *p);
 
 //Helper functions
 char* get_type_string(symbol *sym);
@@ -56,7 +57,7 @@ Type get_unop_type(Type t, UnOp u, int line_no, Expr *e);
 BOOL validate_array_dims(Expr *e, char *scope_id, 
     sym_table *table, int line_no);
 void validate_array_indices(Exprs *indices, char *id,
-    int line_no, sym_table *table, char *scope_id); 
+    int line_no, sym_table *table, char *scope_id, symbol *array_sym);
 
 //Whether we succeed or not.
 static BOOL isValid;
@@ -70,9 +71,6 @@ BOOL analyse(Program *prog){
     isValid = TRUE;
      sym_table *table = gen_sym_table(prog);
 
-    //Perform simple analysis
-    check_main(table);
-
     //Analyse each proc
     Procs*procs = prog->procedures;
     while(procs!=NULL){
@@ -81,11 +79,41 @@ BOOL analyse(Program *prog){
         procs = procs->rest;
     }
 
-    //dump_symbol_table(table);
+    //For debug purposes;
+    #ifdef DEBUG
+    dump_symbol_table(table);
+    #endif
+
+    //Check for unused symbols
+    check_unused_symbols(table, prog);
+
+    //Perform simple analysis
+    check_main(table);
 
     return TRUE;
 }
 
+void report_unused_symbols(const void *node){
+    symbol *s = (symbol *) node;
+    if(!(s->used)){
+        print_unused_symbol_error(get_symbol_id(s), s->line_no);
+    }
+}
+
+void check_unused_symbols(sym_table *table, Program *prog){
+    //For each proc get it's symbol table, then for each symbol    
+    //Map against all symbols and check if used
+    Procs*procs = prog->procedures;
+    while(procs!=NULL){
+        Proc *p = procs->first;
+        //Get the scope 
+        scope *s = find_scope(p->header->id, table);
+
+        //Now we want to map over the scope and print any duplicate errors.
+        map_over_symbols(s->table, report_unused_symbols);
+        procs = procs->rest;
+    }
+}
 
 void check_main(sym_table *table){
     scope *m = find_scope("main", table);
@@ -178,6 +206,7 @@ void generate_decls_symbols(Decls *decls, scope *sc, sym_table *prog){
         s->sym_type = SYM_LOCAL;
         s->sym_value = d;
         s->line_no = d->lineno;
+        s->used = FALSE;
         // Insert the symbol
         if(!insert_symbol(prog, s, sc)){
             symbol *orig = retrieve_symbol(get_symbol_id(s), sc->id,prog);
@@ -373,7 +402,7 @@ Type get_expr_type(Expr *e, Expr *parent,
             if(validate_array_dims(e, scope_id, table, line_no)){
                 symbol *a = retrieve_symbol(e->id, scope_id, table);
                 validate_array_indices(e->indices, e->id, 
-                    line_no, table, scope_id);
+                    line_no, table, scope_id, a);
                 e->inferred_type = get_type(a);
                 return e->inferred_type;
             } else {
@@ -397,14 +426,28 @@ Type get_expr_type(Expr *e, Expr *parent,
 }
 
 void validate_array_indices(Exprs *indices, char *id,
-    int line_no, sym_table *table, char *scope_id){
+    int line_no, sym_table *table, char *scope_id, symbol *array_sym){
+
     int p_num = 1;
+    Decl *d = (Decl *) array_sym->sym_value;
+    Intervals *is = d->array;
     while(indices!=NULL){
         Expr *e = indices->first;
         Type t = get_expr_type(e, NULL, table, scope_id, line_no);
         if(t!=INT_TYPE){
             print_array_index_error(indices, id, line_no, p_num, t);
-        } 
+        } else if(e->kind == EXPR_CONST){
+            //Now check bounds for static
+            //We now know it's int and 
+            Interval *i = is->first;
+            int val = e->constant.val.int_val;
+            if(i->lower > val || val > i->upper){
+                //Then we have out of bounds here.
+                print_array_outofbounds_error(indices, id, line_no, p_num, i);
+                e->inferred_type = INVALID_TYPE;
+            }
+        }
+        is = is->rest; 
         indices = indices->rest;
         p_num++;
     }
@@ -457,8 +500,17 @@ Type get_binop_type(Type t1, Type t2, BinOp b, int line_no, Expr *e){
 
         case BINOP_ADD:
         case BINOP_MUL:
-        case BINOP_SUB:
         case BINOP_DIV:
+            //Special case purely for div
+            if(t2 != BOOL_TYPE){
+                if(t2 == FLOAT_TYPE){
+                    //
+                } else if(t2 == INT_TYPE){
+
+                }
+            }
+           
+        case BINOP_SUB:
             //If either are bool, then we cannot apply these operators, 
             //otherwise return float over int.
             if( t1 == BOOL_TYPE || t2 == BOOL_TYPE){
@@ -484,7 +536,7 @@ Type get_unop_type(Type t, UnOp u, int line_no, Expr *e){
     switch(u){
         case UNOP_MINUS:
             if(t == BOOL_TYPE){
-                print_unop_error(e, line_no, t, "boolean");
+                print_unop_error(e, line_no, t, "numeric");
                 isValid = FALSE;
                 e->inferred_type = INVALID_TYPE;
                 return INVALID_TYPE;
@@ -494,7 +546,7 @@ Type get_unop_type(Type t, UnOp u, int line_no, Expr *e){
             }
         case UNOP_NOT:
             if(t != BOOL_TYPE){
-                print_unop_error(e, line_no, t, "numeric");
+                print_unop_error(e, line_no, t, "boolean");
                 isValid = FALSE;
                 e->inferred_type = INVALID_TYPE;
                 return INVALID_TYPE;
@@ -525,6 +577,8 @@ validate_array_dims(Expr *e, char *scope_id, sym_table *table, int line_no){
 
 Type get_type(symbol *sym){
     // Find the second type
+    sym->used = TRUE;
+
     if(sym->sym_type == SYM_PARAM){
         Param *p = (Param *) sym->sym_value;
         return p->type;
@@ -553,8 +607,6 @@ int count_array(Intervals *l){
     }
     return i;
 }
-
-
 
 int count_params(Params *l){
     int i=0;

@@ -1,16 +1,12 @@
 /* codegen.h */
 
-/*-----------------------------------------------------------------------
-    Developed by: #undef TEAMNAME
-    Provides function definitions and external access rights for 
-	codegen.c
------------------------------------------------------------------------*/
+/*-----------------------------------------------------------------------------
+ * Developed by: #undef TEAMNAME
+ * Compiles a Wiz program to Oz
+ *---------------------------------------------------------------------------*/
+
 #include <stdio.h>
-#include "std.h"
 #include "ast.h"
 
-/*----------------------------------------------------------------------
-    External Functions that will be accessed by other C files.  
------------------------------------------------------------------------*/
-
-void generate_code(Program *prog, FILE *fp);
+// Compiles a Wiz program to Oz, outputting to fp. Returns 0 for success.
+int compile(FILE *fp, Program *prog, void *table);

@@ -37,6 +37,10 @@
     Function implementations.  
 -----------------------------------------------------------------------*/
 
+void print_bold(const char *string){
+	fprintf(stderr,BOLDWHITE "%s\n" KNRM,string);
+}
+
 void print_missing_main_error(){
 	fprintf(stderr,BOLDRED "FATALERROR:" BOLDWHITE" program must contain a " 
 		BOLDCYAN "main" BOLDWHITE" function.\n\n");
@@ -80,6 +84,12 @@ void print_dupe_symbol_errors(char *id, Type t1, Type t2,
 	print_indents(stderr, 3);
 	fprintf(stderr,"%s %s;\n", id, typenames[t2]);
 	fprintf(stderr,"\n");
+}
+
+void print_unused_symbol_error(char *id, int line_no){
+	fprintf(stderr, BOLDWHITE "%d " BOLDYELLOW "warning: " BOLDWHITE 
+		"symbol " KYEL "%s" KNRM " has been defined but is not used.\n\n"
+		, line_no, id);
 }
 
 void print_if_error(Expr *e, Type c, int line_no){
@@ -159,6 +169,20 @@ void print_array_index_error(Exprs *indices, char *id, int line_no,
 		KMAG "int" KNRM " received " KMAG "%s" KNRM".\n\n",
 		p_num, typenames[t]);
 }
+
+void print_array_outofbounds_error(Exprs *indices, char *id, int line_no,
+	int p_num, Interval *i){
+	fprintf(stderr, BOLDWHITE "%d " BOLDRED "error: " BOLDWHITE 
+		"in array access " KYEL "%s" KNRM ":\n", line_no, id);
+	print_indents(stderr, 3);
+	fprintf(stderr,"%s[", id);
+	print_exprs(stderr, indices);
+	fprintf(stderr,"]\n");
+	fprintf(stderr,"argument " KMAG "%d" KNRM " is out of bounds. Index must be"
+		"between " KYEL "%d" KNRM " and " KYEL "%d" KNRM" (inclusive).\n\n",
+		p_num, i->lower, i->upper);
+}
+
 
 void print_binop_error(Expr *e, int line_no, Type right, 
 	Type left, char *expected){

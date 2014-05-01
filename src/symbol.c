@@ -4,9 +4,6 @@
     Developed by: #undef TEAMNAME
     Provides a symbol table for use in semantic analysis and compilation
     of programs from the wiz languge to Oz machine code.
-
-    The table is laid out as follows
-
 -----------------------------------------------------------------------*/
 #include <string.h>
 #include "symbol.h"
@@ -20,8 +17,6 @@
 /*----------------------------------------------------------------------
     Internal function definitions.  
 -----------------------------------------------------------------------*/
-#define TABLE_HEAD 0
-
 // For finding things
 int comp_scope(const void *a, const void *b);
 int comp_symbol(const void *a, const void *b);
@@ -159,4 +154,9 @@ void dump_symbol_table(sym_table *prog){
 
 void free_tree(sym_table *prog){
 	// Also avoid this for now.
+}
+
+void map_over_symbols(void *sym_table, void (*map_func)(const void *node)){
+	//Wraps around bbst to preserve abstraction layer
+	bbst_map(sym_table, map_func);
 }

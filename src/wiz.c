@@ -21,7 +21,8 @@
 #include    "analyse.h"
 #include    "missing.h"
 #include    "pretty.h"
-#include "error_printer.h"
+#include    "ozoptimiser.h"
+#include    "error_printer.h"
 
 
 const char  *progname;
@@ -40,9 +41,11 @@ main(int argc, char **argv) {
     const char  *in_filename;
     FILE        *fp = stdout;
     BOOL        pretty_print_only;
+    BOOL        analyse_optimise_print;
 
     progname = argv[0];
     pretty_print_only = FALSE;
+    analyse_optimise_print = FALSE;
 
     /* Process command line */
     if ((argc < 2) || (argc > 3)) {
@@ -57,6 +60,11 @@ main(int argc, char **argv) {
         pretty_print_only = TRUE;
         in_filename = argv[2];
     }
+    if (argc == 3 && streq(argv[1],"-op")) {
+        analyse_optimise_print = TRUE;
+        in_filename = argv[2];
+    }
+
     
     iz_infile = in_filename;
     yyin = fopen(in_filename, "r");
@@ -70,14 +78,30 @@ main(int argc, char **argv) {
         exit(EXIT_FAILURE);
     }
 
-    if (pretty_print_only) 
+    if (pretty_print_only) {
         pretty_prog(fp, parsed_program);
-    else
-        if(analyse(parsed_program)){
-            generate_code(parsed_program,fp);
-        } else {    
-            report_error_and_exit("Invalid Program.");
-        }   
+        return 0;
+    }
+
+    if (analyse_optimise_print) {
+        print_bold("Original Program:");
+        pretty_prog(fp, parsed_program);
+        reduce_ast(parsed_program);
+        print_bold("\nOptimised Program:");
+        pretty_prog(fp, parsed_program);
+        print_bold("\n Errors Detected:");
+        analyse(parsed_program);
+        return 0;
+    }
+
+    //Standard compilation
+    reduce_ast(parsed_program);
+
+    if(analyse(parsed_program)){
+        compile(fp, parsed_program, NULL);
+    } else {    
+        report_error_and_exit("Invalid Program.");
+    }   
     return 0;
 }
 

@@ -10,6 +10,7 @@
 
 // General error
 void report_error_and_exit(const char *msg);  
+void print_bold(const char *string);
 
 //Specific errors
 void print_missing_main_error();
@@ -29,3 +30,8 @@ void print_func_ptype_error(int par_num, Type caller,
 	 Type func, Function *f, int line_no);
 void print_array_index_error(Exprs *indices, char *id, 
 	 int line_no, int p_num, Type t);
+
+void print_array_outofbounds_error(Exprs *indices, char *id, int line_no,
+	int p_num, Interval *i);
+
+void print_unused_symbol_error(char *id, int line_no);
