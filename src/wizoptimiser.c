@@ -1,4 +1,4 @@
-/* ozoptimiser.c */
+/* wizoptimiser.h.c */
 
 /*-----------------------------------------------------------------------
     Developed by: #undef TEAMNAME
@@ -49,8 +49,7 @@ void reduce_statements(Stmts *statements){
 
         StmtKind kind = statement->kind;
         SInfo *info = &(statement->info);
-        int line_no = statement->lineno;
-
+        
          // Switch on kind of statement and print appropriately
         switch(kind) {
             case STMT_ASSIGN: 

@@ -9,6 +9,8 @@
 #include "symbol.h"
 #include "balanced_bst.h"
 #include "helper.h"
+#include "error_printer.h"
+
 
 /*----------------------------------------------------------------------
     Internal structures.  
@@ -77,6 +79,7 @@ scope* create_scope(void *table, char *scope_id, void *p, int line_no){
 	new_scope->id = scope_id;
 	new_scope->params = p;
 	new_scope->line_no = line_no;
+	new_scope->next_slot = 0;
 	bbst_insert(table, scope_id, new_scope, comp_scope);
 	return new_scope;
 }
@@ -94,7 +97,7 @@ BOOL insert_symbol(sym_table *prog, symbol *sym, scope *s){
 }
 
 char* get_symbol_id(symbol *a){
-	if(a->sym_type == SYM_LOCAL){
+	if(a->sym_kind == SYM_LOCAL){
 		//Then we have a decl
 		Decl *d = (Decl *) a->sym_value;
 		return d->id;
@@ -113,6 +116,16 @@ symbol* retrieve_symbol(char *id, char *scope_id, sym_table *prog){
 	if(s!=NULL){
 		return bbst_find_node(id, s->table, comp_symbol);
 	} else {
+		return NULL;
+	}
+}
+
+symbol* retrieve_symbol_in_scope(char *id, scope *s){
+	//First check if the scope exists, otherwise insert.
+	if(s != NULL){
+		symbol *sym = (symbol *) bbst_find_node(id, s->table, comp_symbol);
+		return sym;		
+	} else {	
 		return NULL;
 	}
 }
@@ -160,3 +173,29 @@ void map_over_symbols(void *sym_table, void (*map_func)(const void *node)){
 	//Wraps around bbst to preserve abstraction layer
 	bbst_map(sym_table, map_func);
 }
+
+// Get the size of a symtable
+int slots_needed_for_table(void *table){
+	scope *s = (scope *) table;
+	return s->next_slot;
+}
+
+
+SymType
+sym_type_from_ast_type(Type t) {
+    switch (t) {
+        case BOOL_TYPE:
+            return SYM_BOOL;
+
+        case INT_TYPE:
+            return SYM_INT;
+
+        case FLOAT_TYPE:
+            return SYM_REAL;
+
+        default:
+            report_error_and_exit("invalid type for symbol!");
+            return -1; //can't get here, but otherwise gcc complains
+    }
+}
+

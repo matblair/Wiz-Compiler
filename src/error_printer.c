@@ -172,7 +172,7 @@ void print_array_index_error(Exprs *indices, char *id, int line_no,
 
 void print_array_outofbounds_error(Exprs *indices, char *id, int line_no,
 	int p_num, Interval *i){
-	fprintf(stderr, BOLDWHITE "%d " BOLDRED "error: " BOLDWHITE 
+	fprintf(stderr, BOLDWHITE "%d " BOLDYELLOW "warning: " BOLDWHITE 
 		"in array access " KYEL "%s" KNRM ":\n", line_no, id);
 	print_indents(stderr, 3);
 	fprintf(stderr,"%s[", id);

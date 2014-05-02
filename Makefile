@@ -39,12 +39,12 @@ clean:
 	/bin/rm -rf $(BUILD) $(AUTO) $(BIN)
 
 $(OBJ): %.o  :  %.c | $(BUILD)
-	@echo Analysing $(basename $(@F)).c!
-	#@gcc  --analyze $(filter  %$(basename $(@F)).c, $(SRC))  -I$(AUTO) -I$(SRCD) -o $(BUILD)$@
 	@gcc  -c $(filter  %$(basename $(@F)).c, $(SRC))  -I$(AUTO) -I$(SRCD) -o $(BUILD)$@
 	@echo Finished $(basename $(@F)).c!
 
-
+analyse:
+	@echo Analysing $(basename $(@F)).c!
+	@gcc  --analyze $(filter  %$(basename $(@F)).c, $(SRC))  -I$(AUTO) -I$(SRCD) -o $(BUILD)$@
 
 print:
 	@echo build		: $(OBJ)

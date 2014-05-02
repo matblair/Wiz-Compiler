@@ -59,6 +59,9 @@ BOOL validate_array_dims(Expr *e, char *scope_id,
 void validate_array_indices(Exprs *indices, char *id,
     int line_no, sym_table *table, char *scope_id, symbol *array_sym);
 
+void add_bounds_to_symbol(symbol *sym, Intervals *intvls);
+void add_frames_to_stack(scope *t, int size);
+
 //Whether we succeed or not.
 static BOOL isValid;
 
@@ -66,10 +69,10 @@ static BOOL isValid;
 FUNCTIONS!!!! cOMMENT THIS LATER
 -----------------------------------------------------------------------*/
 
-BOOL analyse(Program *prog){
+void* analyse(Program *prog){
     //Generate the symbol table
     isValid = TRUE;
-     sym_table *table = gen_sym_table(prog);
+    sym_table *table = gen_sym_table(prog);
 
     //Analyse each proc
     Procs*procs = prog->procedures;
@@ -90,7 +93,11 @@ BOOL analyse(Program *prog){
     //Perform simple analysis
     check_main(table);
 
-    return TRUE;
+    if(isValid){
+      return (void *) table;
+    } else {
+        return NULL;
+    }
 }
 
 void report_unused_symbols(const void *node){
@@ -200,13 +207,27 @@ sym_table* gen_sym_table(Program *prog){
 void generate_decls_symbols(Decls *decls, scope *sc, sym_table *prog){
     while(decls!=NULL){
         // Get current param
-        Decl *d = decls->first;
+        Decl *decl = decls->first;
         // Make a symbol
         symbol *s = checked_malloc(sizeof(symbol));
-        s->sym_type = SYM_LOCAL;
-        s->sym_value = d;
-        s->line_no = d->lineno;
+        s->sym_kind = SYM_LOCAL;
+        s->sym_value = decl;
+        s->line_no = decl->lineno;
+        s->slot = sc->next_slot;
+        sc->next_slot++;
+        s->type = sym_type_from_ast_type(decl->type);
         s->used = FALSE;
+        Bound *bound;
+        int frames;
+
+        // create bounds if decl is an array, and add the extra frames needed
+        if (decl->array != NULL) {
+            add_bounds_to_symbol(s, decl->array);
+            bound = s->bounds->first;
+            frames = bound->offset_size * (bound->upper - bound->lower + 1);
+            add_frames_to_stack((scope *) sc, frames - 1);
+        }
+
         // Insert the symbol
         if(!insert_symbol(prog, s, sc)){
             symbol *orig = retrieve_symbol(get_symbol_id(s), sc->id,prog);
@@ -219,6 +240,53 @@ void generate_decls_symbols(Decls *decls, scope *sc, sym_table *prog){
     }
 }
 
+// add bounds to symbol (for arrays)
+void
+add_bounds_to_symbol(symbol *sym, Intervals *intvls) {
+    if (intvls == NULL) {
+        sym->bounds = NULL;
+        return; // no more intervals to store!
+    }
+
+    // calculate the rest of the bounds
+    add_bounds_to_symbol(sym, intvls->rest);
+
+    Interval *intvl;
+    Bounds *bounds;
+    Bound *bound;
+    int offset;
+
+    // get the interval we're working with
+    intvl = intvls->first;
+
+    if (sym->bounds != NULL) {
+        bound = sym->bounds->first;
+        offset = bound->upper - bound->lower;
+        offset *= bound->offset_size;
+    } else {
+        offset = 1;
+    }
+
+    // create new bound struct
+    bound = checked_malloc(sizeof(Bound));
+    bound->lower = intvl->lower;
+    bound->upper = intvl->upper;
+    bound->offset_size = offset;
+
+    // add to linked list
+    bounds = checked_malloc(sizeof(Bounds));
+    bounds->rest = sym->bounds;
+    bounds->first = bound;
+    sym->bounds = bounds;
+}
+
+// consume more of the slots, for arrays
+void
+add_frames_to_stack(scope *t, int size) {
+    t->next_slot += size;
+}
+
+
 void generate_params_symbols(Header *h, scope *sc, sym_table *prog){
     //We go through the params and add a symbol for each one.
     Params *params = h->params;
@@ -226,9 +294,16 @@ void generate_params_symbols(Header *h, scope *sc, sym_table *prog){
     while(params!=NULL){
         // Get current param
         Param *p = params->first;
-        // Make a symbol
+        // Make a symbol;
         symbol *s = checked_malloc(sizeof(symbol));
-        s->sym_type = SYM_PARAM;
+        if(p->ind == VAL_IND){
+            s->sym_kind = SYM_PARAM_VAL;
+        } else {
+            s->sym_kind = SYM_PARAM_REF;
+        }
+        s->type = sym_type_from_ast_type(p->type);
+        s->slot = sc->next_slot;
+        sc->next_slot++;
         s->sym_value = p;
         s->line_no = line_no;
 
@@ -293,9 +368,8 @@ void analyse_read(Expr *read, sym_table *table, char *scope_id, int line_no){
 void analyse_write(Expr *write, sym_table *table, char *scope_id, int line_no){
     //We just need to check the type is valid or that it is a constant,
     // so we try get the symbol and if we fail then we can't write.
-    if(write->kind != EXPR_CONST){
-         get_expr_type(write, NULL, table, scope_id, line_no);
-    }
+    get_expr_type(write, NULL, table, scope_id, line_no);
+
 }
 
 void 
@@ -351,7 +425,7 @@ analyse_function(Function *f, sym_table *prog, char *scope_id, int line_no){
 char* get_type_string(symbol *sym){
     // Find the second type
     char *type = checked_malloc(16 * sizeof(char));
-    if(sym->sym_type == SYM_PARAM){
+    if(sym->sym_kind == SYM_PARAM_VAL || sym->sym_kind == SYM_PARAM_REF){
         Param *p = (Param *) sym->sym_value;
         sprintf(type, "%s parameter", typenames[p->type]);
     } else {
@@ -371,7 +445,10 @@ Type get_expr_type(Expr *e, Expr *parent,
         case EXPR_ID:
             //Find the symbol and get it's type
             if(retrieve_symbol(e->id, scope_id, table)){
-                return get_type(retrieve_symbol(e->id, scope_id, table));
+                //Lets check the type 
+                Type t = get_type(retrieve_symbol(e->id, scope_id, table));
+                e->inferred_type = t;
+                return t;
             } else {
                  //Not good. Let the user know.
                 print_undefined_variable_error(e, parent, line_no);
@@ -381,7 +458,13 @@ Type get_expr_type(Expr *e, Expr *parent,
             }
             break;
         case EXPR_CONST:
-            return get_const_type(e);
+            if(e!=NULL){ //fuck c.
+                Type t =  get_const_type(e);
+                e->inferred_type = t;
+                return t;
+            }
+            
+
             break;
         case EXPR_BINOP:
             //We need the types of each expression
@@ -436,6 +519,7 @@ void validate_array_indices(Exprs *indices, char *id,
         Type t = get_expr_type(e, NULL, table, scope_id, line_no);
         if(t!=INT_TYPE){
             print_array_index_error(indices, id, line_no, p_num, t);
+            isValid = FALSE;
         } else if(e->kind == EXPR_CONST){
             //Now check bounds for static
             //We now know it's int and 
@@ -578,8 +662,7 @@ validate_array_dims(Expr *e, char *scope_id, sym_table *table, int line_no){
 Type get_type(symbol *sym){
     // Find the second type
     sym->used = TRUE;
-
-    if(sym->sym_type == SYM_PARAM){
+    if(sym->sym_kind == SYM_PARAM_VAL || sym->sym_kind == SYM_PARAM_REF){
         Param *p = (Param *) sym->sym_value;
         return p->type;
     } else {

@@ -1,4 +1,4 @@
-/* ozoptimiser.h */
+/* wizoptimiser.h.h */
 
 /*-----------------------------------------------------------------------
     Developed by: #undef TEAMNAME

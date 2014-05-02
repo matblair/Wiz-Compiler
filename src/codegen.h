@@ -9,4 +9,4 @@
 #include "ast.h"
 
 // Compiles a Wiz program to Oz, outputting to fp. Returns 0 for success.
-int compile(FILE *fp, Program *prog, void *table);
+int compile(FILE *fp, Program *prog);

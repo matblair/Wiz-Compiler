@@ -21,7 +21,7 @@
 #include    "analyse.h"
 #include    "missing.h"
 #include    "pretty.h"
-#include    "ozoptimiser.h"
+#include    "wizoptimiser.h"
 #include    "error_printer.h"
 
 
@@ -66,7 +66,6 @@ main(int argc, char **argv) {
     }
 
     
-    iz_infile = in_filename;
     yyin = fopen(in_filename, "r");
     if (yyin == NULL) {
         perror(in_filename);
@@ -96,12 +95,7 @@ main(int argc, char **argv) {
 
     //Standard compilation
     reduce_ast(parsed_program);
-
-    if(analyse(parsed_program)){
-        compile(fp, parsed_program, NULL);
-    } else {    
-        report_error_and_exit("Invalid Program.");
-    }   
+    compile(fp, parsed_program);
     return 0;
 }
 
