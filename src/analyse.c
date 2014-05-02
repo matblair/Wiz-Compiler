@@ -101,9 +101,11 @@ void* analyse(Program *prog){
 }
 
 void report_unused_symbols(const void *node){
-    symbol *s = (symbol *) node;
-    if(!(s->used)){
-        print_unused_symbol_error(get_symbol_id(s), s->line_no);
+    if(node != NULL){
+        symbol *s = (symbol *) node;
+        if(!(s->used)){
+            print_unused_symbol_error(get_symbol_id(s), s->line_no);
+        }
     }
 }
 
@@ -233,6 +235,7 @@ void generate_decls_symbols(Decls *decls, scope *sc, sym_table *prog){
             symbol *orig = retrieve_symbol(get_symbol_id(s), sc->id,prog);
             print_dupe_symbol_errors(get_symbol_id(s), get_type(orig), 
                 get_type(s), s->line_no, orig->line_no);
+            isValid = FALSE;
             
         }
         //Contine along
@@ -308,7 +311,12 @@ void generate_params_symbols(Header *h, scope *sc, sym_table *prog){
         s->line_no = line_no;
 
         // Insert the symbol
-        insert_symbol(prog, s, sc);
+        if(!insert_symbol(prog, s, sc)){
+            symbol *orig = retrieve_symbol(get_symbol_id(s), sc->id,prog);
+            print_dupe_symbol_errors(get_symbol_id(s), get_type(orig), 
+                get_type(s), s->line_no, orig->line_no);
+            isValid = FALSE;
+        }
         //Contine along
         params = params->rest;
     }   
@@ -376,6 +384,15 @@ void
 analyse_function(Function *f, sym_table *prog, char *scope_id, int line_no){
     //Find the scope of the function
     scope *called = find_scope(f->id, prog);
+
+    //Find the scope
+    if(!called){
+        //Ooops this is an error. Report it.
+        print_undefined_proc_call_error(f,line_no);
+        isValid = FALSE;
+        return;
+    }
+
     Params *fcallee = (Params *) called->params;
     Exprs *fcaller = f->args;
     //Check number of variables
@@ -561,6 +578,9 @@ Type get_binop_type(Type t1, Type t2, BinOp b, int line_no, Expr *e){
             if( t1 == t2 ){
                 e->inferred_type = BOOL_TYPE;
                 return BOOL_TYPE;
+            } else if (t1 != BOOL_TYPE && t2 != BOOL_TYPE){
+                e->inferred_type = BOOL_TYPE;
+                return BOOL_TYPE;
             } else {
                 print_binop_error(e, line_no, t1, t2, "both be equal types");
                 isValid = FALSE;
@@ -578,6 +598,24 @@ Type get_binop_type(Type t1, Type t2, BinOp b, int line_no, Expr *e){
                 e->inferred_type = INVALID_TYPE;
                 return INVALID_TYPE;
             } else {
+                //We need to check for comparing floats with int const and if so
+                // //change the ints to floats.
+                // if(t1 == FLOAT_TYPE && t2 == INT_TYPE){
+                //     if(e->e2->kind == EXPR_CONST){
+                //         int val = e->e1->constant.val.int_val;
+                //         e->e2->constant.type = FLOAT_TYPE;
+                //         e->e2->constant.val.float_val = (float) val;
+                //         e->e2->inferred_type = FLOAT_TYPE;
+                //     }
+                // } else if (t1 == INT_TYPE && t2 == FLOAT_TYPE){
+                //     //Then make e1 into a float const.
+                //     if(e->e1->kind == EXPR_CONST){
+                //         int val = e->e1->constant.val.int_val;
+                //         e->e1->constant.type = FLOAT_TYPE;
+                //         e->e1->constant.val.float_val = (float) val;
+                //         e->e1->inferred_type = FLOAT_TYPE;
+                //     }
+                // }
                 e->inferred_type = BOOL_TYPE;
                 return BOOL_TYPE;
             }

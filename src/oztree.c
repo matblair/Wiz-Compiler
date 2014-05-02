@@ -273,6 +273,8 @@ gen_oz_write(OzProgram *p, Expr *write, void *table) {
         default:
             report_error_and_exit("cannot infer type for write!");
     }
+    gen_call_builtin(p, BUILTIN_PRINT_STRING);
+
 }
 
 void
@@ -511,7 +513,7 @@ gen_oz_expr_binop(OzProgram *p, int reg, Expr *expr, void *table) {
     gen_oz_expr(p, reg, expr->e1, table);
     gen_oz_expr(p, reg + 1, expr->e2, table);
 
-    // Do we need to worry about converting float to int?
+    // Do we need to worry about converting float to int? yep.
     if (etype == FLOAT_TYPE) {
         // left side of expression
         if (e1type == INT_TYPE) {
@@ -521,6 +523,16 @@ gen_oz_expr_binop(OzProgram *p, int reg, Expr *expr, void *table) {
         // right side; can't have both inferred int resulting in inferred float
         else if (e2type == INT_TYPE) {
             gen_binop(p, OP_INT_TO_REAL, reg + 1, reg + 1);
+        }
+    } else if (etype == BOOL_TYPE && e1type!=BOOL_TYPE && e2type!=BOOL_TYPE){
+        if (e1type == INT_TYPE && e2type == FLOAT_TYPE){
+            if(expr->e1->kind == EXPR_CONST){
+                gen_binop(p, OP_INT_TO_REAL, reg, reg);
+            }
+        } else if (e1type == FLOAT_TYPE && e2type == INT_TYPE){
+            if(expr->e2->kind == EXPR_CONST){
+                gen_binop(p, OP_INT_TO_REAL, reg+1, reg+1);
+            }
         }
     }
 
@@ -670,21 +682,22 @@ gen_oz_expr_unop(OzProgram *p, int reg, Expr *expr, void *table) {
     }
 
     // generate the op of this expr
-    if (t == BOOL_TYPE && expr->binop == UNOP_NOT) {
+    if (t == BOOL_TYPE && expr->unop == UNOP_NOT) {
         gen_binop(p, OP_NOT, reg, reg);
     }
 
-    else if (t == INT_TYPE && expr->binop == UNOP_MINUS) {
+    else if (t == INT_TYPE && expr->unop == UNOP_MINUS) {
         gen_int_const(p, reg + 1, 0);
         gen_triop(p, OP_SUB_INT, reg, reg + 1, reg);
     }
 
-    else if (t == FLOAT_TYPE && expr->binop == UNOP_MINUS) {
+    else if (t == FLOAT_TYPE && expr->unop == UNOP_MINUS) {
         gen_real_const(p, reg + 1, 0.0f);
         gen_triop(p, OP_SUB_REAL, reg, reg + 1, reg);
     }
 
     else {
+        fprintf(stderr,"Type is %s for %s\n", typenames[t], expr->id);
         report_error_and_exit("invalid op for unop expr!");
     }
 }
@@ -775,6 +788,7 @@ gen_return(OzProgram *p) {
 void
 gen_load(OzProgram *p, int reg, symbol *sym) {
     if (sym->sym_kind == SYM_PARAM_REF) {
+
         gen_binop(p, OP_LOAD_INDIRECT, reg, sym->slot);
     } else {
         gen_binop(p, OP_LOAD, reg, sym->slot);
@@ -784,7 +798,9 @@ gen_load(OzProgram *p, int reg, symbol *sym) {
 void
 gen_store(OzProgram *p, symbol *sym, int reg) {
     if (sym->sym_kind == SYM_PARAM_REF) {
-        gen_binop(p, OP_STORE_INDIRECT, sym->slot, reg);
+        //We need to make sure the address is in a register.
+        gen_binop(p, OP_LOAD, reg+1, sym->slot);
+        gen_binop(p, OP_STORE_INDIRECT, reg+1, reg);
     } else {
         gen_binop(p, OP_STORE, sym->slot, reg);
     }

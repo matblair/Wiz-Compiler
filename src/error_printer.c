@@ -60,6 +60,17 @@ void print_undefined_variable_error(Expr *e, Expr *parent,  int line_no){
 	fprintf(stderr, "Variable " KYEL "%s" KNRM" is undefined.\n\n",e->id);
 }
 
+void print_undefined_proc_call_error(Function *f, int line_no){
+  //Not good. Let the user know.
+	fprintf(stderr, BOLDWHITE "%d " BOLDRED "error: " BOLDWHITE 
+		"in expression:\n" KNRM "", line_no);
+	print_indents(stderr, 4);
+	fprintf(stderr,"%s(", f->id);
+	print_exprs(stderr, f->args);
+	fprintf(stderr,")\n");
+	fprintf(stderr, "Proc " KYEL "%s" KNRM" has not been defined.\n\n",f->id);
+}
+
 void print_dupe_proc_errors(Proc *r, Params *p, int duplicate, int original){
 	fprintf(stderr, BOLDWHITE "%d " BOLDRED "error: " BOLDWHITE 
 		"proc " KYEL "%s" KNRM " has been redefined, originally defined on line"
