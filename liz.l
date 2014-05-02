@@ -9,10 +9,9 @@
 NUM     [0-9]+
 DEC     [0-9]+\.[0-9]+
 ID      [a-zA-Z_][A-Za-z_0-9]*
-/*STRING  \"(\\.|[^"])*\"*/
 nl      [\n\f]
 nonl    [^\n\f]
-STR      [^\t\n\f\"]*
+STR      [^\t\n\f"]*
 
 
 %{
@@ -22,6 +21,7 @@ STR      [^\t\n\f\"]*
 #include "std.h"
 #include "ast.h"
 #include "piz.h"
+#include "helper.h"
 
 #define YY_NO_UNPUT
 
@@ -36,37 +36,37 @@ extern int ln;
 
 %%
 
-and             { return AND_TOKEN;   }
-bool            { return BOOL_TOKEN;  }
-do              { return DO_TOKEN;    }
-else            { return ELSE_TOKEN;  }
-end             { return END_TOKEN;   }
-false           { return FALSE_TOKEN; }
-fi              { return FI_TOKEN;    }
-if              { return IF_TOKEN;    }
-int             { return INT_TOKEN;   }
-float           { return FLOAT_TOKEN; }
-not             { return NOT_TOKEN;   }
-od              { return OD_TOKEN;    }
-or              { return OR_TOKEN;    }
-proc            { return PROC_TOKEN;  }
-read            { return READ_TOKEN;  }
-ref             { return REF_TOKEN;   }
-then            { return THEN_TOKEN;  }
-true            { return TRUE_TOKEN;  }
-val             { return VAL_TOKEN;   }
-while           { return WHILE_TOKEN; }
-write           { return WRITE_TOKEN; }
+and              { return AND_TOKEN;   }
+bool             { return BOOL_TOKEN;  }
+do               { return DO_TOKEN;    }
+else             { return ELSE_TOKEN;  }
+end              { return END_TOKEN;   }
+false            { return FALSE_TOKEN; }
+fi               { return FI_TOKEN;    }
+if               { return IF_TOKEN;    }
+int              { return INT_TOKEN;   }
+float            { return FLOAT_TOKEN; }
+not              { return NOT_TOKEN;   }
+od               { return OD_TOKEN;    }
+or               { return OR_TOKEN;    }
+proc             { return PROC_TOKEN;  }
+read             { return READ_TOKEN;  }
+ref              { return REF_TOKEN;   }
+then             { return THEN_TOKEN;  }
+true             { return TRUE_TOKEN;  }
+val              { return VAL_TOKEN;   }
+while            { return WHILE_TOKEN; }
+write            { return WRITE_TOKEN; }
 
 
-{NUM}           { yylval.int_val = atoi(yytext); 
-                  return NUMBER_TOKEN; }
-{DEC}           { yylval.float_val = atof(yytext); 
-                  return FLOAT_TOKEN; }
-{ID}            { yylval.str_val = (char *) strdup(yytext); 
-                  return IDENT_TOKEN; }
+{NUM}            { yylval.int_val = atoi(yytext); 
+                   return NUMBER_TOKEN; }
+{DEC}            { yylval.float_val = atof(yytext); 
+                   return FLOAT_TOKEN; }
+{ID}             { yylval.str_val = (char *) strdup(yytext); 
+                   return IDENT_TOKEN; }
 
-[-+*,;()\[\]/] { return yytext[0];      }   /* single character tokens */
+[-+*,;()\[\]/]   { return yytext[0];      }   /* single character tokens */
 ":="             { return ASSIGN_TOKEN;   } /* An assignment */
 ".."             { return INTERVAL_TOKEN; } /* An interval */
 "<"              { return LT_TOKEN;       } /* Less than  */
@@ -78,9 +78,12 @@ write           { return WRITE_TOKEN; }
 
 "#"{nonl}*{nl}   { ln++; } /* Any comments */
 
-\"              BEGIN(string);
-<string>\"      BEGIN(INITIAL);
-<string>{STR}   { yylval.str_val = (char *)strdup(yytext); return STRING_TOKEN;}
+\"               BEGIN(string);
+\"\"             { yylval.str_val = (char *)strdup("");
+                   return STRING_TOKEN; }
+<string>\"       BEGIN(INITIAL);
+<string>{STR}    { yylval.str_val = (char *)strdup(yytext);
+                   return STRING_TOKEN;}
 
 
 {nl}             { ln++; } /* Any new lines */

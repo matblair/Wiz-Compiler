@@ -135,12 +135,12 @@ print_op(FILE *fp, OzOp *op) {
             break;
 
         case OP_LOAD_INDIRECT:
-            fprintf(fp, "%*s %d, %d\n", INSTRWIDTH, "load_indirect",
+            fprintf(fp, "%*s r%d, r%d\n", INSTRWIDTH, "load_indirect",
                     * (int *)op->arg1, * (int *)op->arg2);
             break;
 
         case OP_STORE_INDIRECT:
-            fprintf(fp, "%*s %d, %d\n", INSTRWIDTH, "store_indirect",
+            fprintf(fp, "%*s r%d, r%d\n", INSTRWIDTH, "store_indirect",
                     * (int *)op->arg1, * (int *)op->arg2);
             break;
 

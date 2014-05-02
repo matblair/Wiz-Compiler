@@ -7,7 +7,18 @@
 -----------------------------------------------------------------------*/
 
 #include "std.h"
-#include "ast.H"
+#include "ast.h"
+
+typedef struct {
+    int lower;
+    int upper;
+    int offset_size;
+} Bound;
+
+typedef struct bbounds {
+    Bound *first;
+    struct bbounds *rest;
+} Bounds;
 
 typedef enum {
     SYM_PARAM_VAL, SYM_PARAM_REF, SYM_LOCAL
@@ -21,6 +32,7 @@ typedef struct {
     SymKind kind;
     SymType type;
     char    *id;
+    Bounds  *bounds;
     int     slot;
 } Symbol;
 
@@ -28,6 +40,7 @@ typedef struct ssymbols {
     Symbol *first;
     struct ssymbols *rest;
 } Symbols;
+
 
 // Create a new collection of symtables for a program
 void *gen_symtables(Program *);

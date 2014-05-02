@@ -16,10 +16,10 @@
 #include "helper.h"
 
 typedef struct {
-    int      next_slot;
-    void     *symbols_bbst;
-    Symbols* params;
-    Symbols* params_end;
+    int     next_slot;
+    void    *symbols_bbst;
+    Symbols *params;
+    Symbols *params_end;
 } symtable;
 
 /*-----------------------------------------------------------------------------
@@ -28,11 +28,13 @@ typedef struct {
 
 symtable *new_symtable(void);
 int next_stackslot(symtable *);
+void add_frames_to_stack(symtable *, int);
 BOOL add_symbol(void *table, Symbol *sym);
 void *create_symtable(void *tables, char *key);
 BOOL add_symtable_for_proc(void *, Proc *);
 void add_params_to_table(void *table, Params *params);
 void add_decls_to_table(void *table, Decls *decls);
+void add_bounds_to_symbol(Symbol *sym, Intervals *intvls);
 
 void dump_symtables(void *, Program *);
 void dump_symbol_for_id(void *table, char *id);
@@ -131,6 +133,12 @@ next_stackslot(symtable *t) {
     return t->next_slot++;
 }
 
+// consume more of the slots, for arrays
+void
+add_frames_to_stack(symtable *t, int size) {
+    t->next_slot += size;
+}
+
 // Insert a new sybmol into the symbol table. Returns FALSE if symbol already
 // exists for that key. Sets the stack slot for you!
 BOOL
@@ -198,6 +206,7 @@ add_params_to_table(void *table, Params *params) {
         new_sym->id = param->id;
         new_sym->slot = next_stackslot(table);
         new_sym->type = sym_type_from_ast_type(param->type);
+        new_sym->bounds = NULL;
         add_symbol(table, new_sym);
 
         // Store the new symbol at the end of the params list
@@ -222,17 +231,72 @@ add_params_to_table(void *table, Params *params) {
 void
 add_decls_to_table(void *table, Decls *decls) {
     Symbol *new_sym;
+    Decl *decl;
+    int frames;
+    Bound *bound;
 
     while (decls != NULL) {
+        decl = decls->first;
+
+        // Create the new symbol
         new_sym = checked_malloc(sizeof(Symbol));
         new_sym->kind = SYM_LOCAL;
-        new_sym->id = decls->first->id;
+        new_sym->id = decl->id;
         new_sym->slot = next_stackslot(table);
-        new_sym->type = sym_type_from_ast_type(decls->first->type);
+        new_sym->type = sym_type_from_ast_type(decl->type);
+        new_sym->bounds = NULL;
         add_symbol(table, new_sym);
+
+        // create bounds if decl is an array, and add the extra frames needed
+        if (decl->array != NULL) {
+            add_bounds_to_symbol(new_sym, decl->array);
+            bound = new_sym->bounds->first;
+            frames = bound->offset_size * (bound->upper - bound->lower + 1);
+            add_frames_to_stack((symtable *) table, frames - 1);
+        }
 
         decls = decls->rest;
     }
+}
+
+// add bounds to symbol (for arrays)
+void
+add_bounds_to_symbol(Symbol *sym, Intervals *intvls) {
+    if (intvls == NULL) {
+        sym->bounds = NULL;
+        return; // no more intervals to store!
+    }
+
+    // calculate the rest of the bounds
+    add_bounds_to_symbol(sym, intvls->rest);
+
+    Interval *intvl;
+    Bounds *bounds;
+    Bound *bound;
+    int offset;
+
+    // get the interval we're working with
+    intvl = intvls->first;
+
+    if (sym->bounds != NULL) {
+        bound = sym->bounds->first;
+        offset = bound->upper - bound->lower;
+        offset *= bound->offset_size;
+    } else {
+        offset = 1;
+    }
+
+    // create new bound struct
+    bound = checked_malloc(sizeof(Bound));
+    bound->lower = intvl->lower;
+    bound->upper = intvl->upper;
+    bound->offset_size = offset;
+
+    // add to linked list
+    bounds = checked_malloc(sizeof(Bounds));
+    bounds->rest = sym->bounds;
+    bounds->first = bound;
+    sym->bounds = bounds;
 }
 
 
@@ -255,7 +319,8 @@ dump_symtables(void *tables, Program *prog) {
         proc = procs->first;
         proc_name = proc->header->id;
         table = find_symtable(tables, proc_name);
-        fprintf(stderr, "SymTable for proc \"%s\":\n", proc_name);
+        fprintf(stderr, "SymTable for proc \"%s\" (%d slots):\n",
+                proc_name, slots_needed_for_table((void *) table));
 
         // For the parameters
         params = proc->header->params;
