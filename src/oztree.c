@@ -273,8 +273,6 @@ gen_oz_write(OzProgram *p, Expr *write, void *table) {
         default:
             report_error_and_exit("cannot infer type for write!");
     }
-    gen_call_builtin(p, BUILTIN_PRINT_STRING);
-
 }
 
 void
@@ -321,8 +319,12 @@ gen_oz_assign(OzProgram *p, Assign *assign, void *table) {
     // convert to float if needed
     if (sym->type == SYM_REAL && etype == SYM_INT) {
         gen_binop(p, OP_INT_TO_REAL, 0, 0);
+    } else if (assign->asg_ident->indices != NULL){
+        //We have an array
+        gen_oz_expr_array_addr(p,1,assign->asg_ident, table);
+        gen_binop(p, OP_STORE_INDIRECT, 1, 0);
+        return;
     }
-
     // store the variable
     gen_store(p, sym, 0);
 }
@@ -788,7 +790,6 @@ gen_return(OzProgram *p) {
 void
 gen_load(OzProgram *p, int reg, symbol *sym) {
     if (sym->sym_kind == SYM_PARAM_REF) {
-
         gen_binop(p, OP_LOAD_INDIRECT, reg, sym->slot);
     } else {
         gen_binop(p, OP_LOAD, reg, sym->slot);
@@ -805,6 +806,7 @@ gen_store(OzProgram *p, symbol *sym, int reg) {
         gen_binop(p, OP_STORE, sym->slot, reg);
     }
 }
+
 
 void
 gen_proc_label(OzProgram *p, char *id) {

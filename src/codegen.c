@@ -171,7 +171,6 @@ print_op(FILE *fp, OzOp *op) {
             fprintf(fp, "%*s r%d, r%d, r%d\n", INSTRWIDTH, "add_int",
                     * (int *)op->arg1, * (int *)op->arg2, * (int *)op->arg3);
             break;
-            break;
 
         case OP_ADD_REAL:
             fprintf(fp, "%*s r%d, r%d, r%d\n", INSTRWIDTH, "add_real",
