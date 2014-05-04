@@ -23,11 +23,6 @@
 void check_main(sym_table *table);
 void analyse_statements(Stmts *statements, sym_table *table, char *scope_id);
 
-sym_table*  gen_sym_table(Program *prog);
-void generate_scope(Proc *proc, sym_table *table);
-void generate_params_symbols(Header *h, scope *sc, sym_table *prog);
-void generate_decls_symbols(Decls *decls, scope *sc, sym_table *table);
-
 //For analysing thing
 void analyse_assign(Assign *cond, sym_table *table,
      char *scope_id, int line_no);
@@ -48,7 +43,6 @@ int count_params(Params *l);
 int count_array(Intervals *l);
 Type get_expr_type(Expr *e, Expr *parent,
     sym_table *table, char *scope_id, int line_no);
-Type get_type(symbol *sym);
 Type get_const_type(Expr *e);
 BOOL check_int_equiv(Type t);
 BOOL check_float_equiv(Type t);
@@ -59,8 +53,6 @@ BOOL validate_array_dims(Expr *e, char *scope_id,
 void validate_array_indices(Exprs *indices, char *id,
     int line_no, sym_table *table, char *scope_id, symbol *array_sym);
 
-void add_bounds_to_symbol(symbol *sym, Intervals *intvls);
-void add_frames_to_stack(scope *t, int size);
 
 //Whether we succeed or not.
 static BOOL isValid;
@@ -168,158 +160,6 @@ void analyse_statements(Stmts *statements, sym_table *table, char *scope_id){
         }
         statements = statements->rest;  
     }
-}
-
-void generate_scope(Proc *proc, sym_table *prog){
-    //Create the scope
-    char *scope_id = proc->header->id;
-    scope *s = create_scope(prog->table, scope_id, 
-        proc->header->params, proc->header->line_no);
-
-    if(s != NULL){
-        //Now go through and add all the params and internals
-        generate_params_symbols(proc->header, s, prog);
-        generate_decls_symbols(proc->body->decls, s, prog);
-    } else {
-        scope *s = find_scope(scope_id, prog);
-        print_dupe_proc_errors(proc, s->params, s->line_no, 
-            proc->header->line_no);
-
-        isValid = FALSE;
-    }
-}
-
-sym_table* gen_sym_table(Program *prog){
-    //We walk through each proc, generating a symbol table for it 
-    sym_table *table = initialize_sym_table();
-    //Get our procedures and generate each thing
-    Procs *procs = prog->procedures;
-    while(procs!=NULL){
-        // Get the current proc
-        Proc *current = procs->first;
-        // Generate the scope for this proc
-        generate_scope(current, table);
-        // Continue along
-        procs = procs->rest;    
-    }
-    //dump_symbol_table(table);
-    return table;
-}
-
-void generate_decls_symbols(Decls *decls, scope *sc, sym_table *prog){
-    while(decls!=NULL){
-        // Get current param
-        Decl *decl = decls->first;
-        // Make a symbol
-        symbol *s = checked_malloc(sizeof(symbol));
-        s->sym_kind = SYM_LOCAL;
-        s->sym_value = decl;
-        s->line_no = decl->lineno;
-        s->slot = sc->next_slot;
-        sc->next_slot++;
-        s->type = sym_type_from_ast_type(decl->type);
-        s->used = FALSE;
-        Bound *bound;
-        int frames;
-
-        // create bounds if decl is an array, and add the extra frames needed
-        if (decl->array != NULL) {
-            add_bounds_to_symbol(s, decl->array);
-            bound = s->bounds->first;
-            frames = bound->offset_size * (bound->upper - bound->lower + 1);
-            add_frames_to_stack((scope *) sc, frames - 1);
-        }
-
-        // Insert the symbol
-        if(!insert_symbol(prog, s, sc)){
-            symbol *orig = retrieve_symbol(get_symbol_id(s), sc->id,prog);
-            print_dupe_symbol_errors(get_symbol_id(s), get_type(orig), 
-                get_type(s), s->line_no, orig->line_no);
-            isValid = FALSE;
-            
-        }
-        //Contine along
-        decls = decls->rest;
-    }
-}
-
-// add bounds to symbol (for arrays)
-void
-add_bounds_to_symbol(symbol *sym, Intervals *intvls) {
-    if (intvls == NULL) {
-        sym->bounds = NULL;
-        return; // no more intervals to store!
-    }
-
-    // calculate the rest of the bounds
-    add_bounds_to_symbol(sym, intvls->rest);
-
-    Interval *intvl;
-    Bounds *bounds;
-    Bound *bound;
-    int offset;
-
-    // get the interval we're working with
-    intvl = intvls->first;
-
-    if (sym->bounds != NULL) {
-        bound = sym->bounds->first;
-        offset = (bound->upper) - (bound->lower);
-        offset *= bound->offset_size;
-    } else {
-        offset = 1;
-    }
-
-    // create new bound struct
-    bound = checked_malloc(sizeof(Bound));
-    bound->lower = intvl->lower;
-    bound->upper = intvl->upper;
-    bound->offset_size = offset;
-
-    // add to linked list
-    bounds = checked_malloc(sizeof(Bounds));
-    bounds->rest = sym->bounds;
-    bounds->first = bound;
-    sym->bounds = bounds;
-}
-
-// consume more of the slots, for arrays
-void
-add_frames_to_stack(scope *t, int size) {
-    t->next_slot += size;
-}
-
-
-void generate_params_symbols(Header *h, scope *sc, sym_table *prog){
-    //We go through the params and add a symbol for each one.
-    Params *params = h->params;
-    int line_no = h->line_no;
-    while(params!=NULL){
-        // Get current param
-        Param *p = params->first;
-        // Make a symbol;
-        symbol *s = checked_malloc(sizeof(symbol));
-        if(p->ind == VAL_IND){
-            s->sym_kind = SYM_PARAM_VAL;
-        } else {
-            s->sym_kind = SYM_PARAM_REF;
-        }
-        s->type = sym_type_from_ast_type(p->type);
-        s->slot = sc->next_slot;
-        sc->next_slot++;
-        s->sym_value = p;
-        s->line_no = line_no;
-
-        // Insert the symbol
-        if(!insert_symbol(prog, s, sc)){
-            symbol *orig = retrieve_symbol(get_symbol_id(s), sc->id,prog);
-            print_dupe_symbol_errors(get_symbol_id(s), get_type(orig), 
-                get_type(s), s->line_no, orig->line_no);
-            isValid = FALSE;
-        }
-        //Contine along
-        params = params->rest;
-    }   
 }
 
 void analyse_assign(Assign *a, sym_table *table, char *scope_id, int line_no){
@@ -480,7 +320,6 @@ Type get_expr_type(Expr *e, Expr *parent,
                 e->inferred_type = t;
                 return t;
             }
-            
 
             break;
         case EXPR_BINOP:
@@ -598,24 +437,6 @@ Type get_binop_type(Type t1, Type t2, BinOp b, int line_no, Expr *e){
                 e->inferred_type = INVALID_TYPE;
                 return INVALID_TYPE;
             } else {
-                //We need to check for comparing floats with int const and if so
-                // //change the ints to floats.
-                // if(t1 == FLOAT_TYPE && t2 == INT_TYPE){
-                //     if(e->e2->kind == EXPR_CONST){
-                //         int val = e->e1->constant.val.int_val;
-                //         e->e2->constant.type = FLOAT_TYPE;
-                //         e->e2->constant.val.float_val = (float) val;
-                //         e->e2->inferred_type = FLOAT_TYPE;
-                //     }
-                // } else if (t1 == INT_TYPE && t2 == FLOAT_TYPE){
-                //     //Then make e1 into a float const.
-                //     if(e->e1->kind == EXPR_CONST){
-                //         int val = e->e1->constant.val.int_val;
-                //         e->e1->constant.type = FLOAT_TYPE;
-                //         e->e1->constant.val.float_val = (float) val;
-                //         e->e1->inferred_type = FLOAT_TYPE;
-                //     }
-                // }
                 e->inferred_type = BOOL_TYPE;
                 return BOOL_TYPE;
             }
@@ -697,17 +518,6 @@ validate_array_dims(Expr *e, char *scope_id, sym_table *table, int line_no){
     }   
 }
 
-Type get_type(symbol *sym){
-    // Find the second type
-    sym->used = TRUE;
-    if(sym->sym_kind == SYM_PARAM_VAL || sym->sym_kind == SYM_PARAM_REF){
-        Param *p = (Param *) sym->sym_value;
-        return p->type;
-    } else {
-        Decl *d = (Decl *) sym->sym_value;
-        return d->type;
-    }
-}
 
 int count_list(Exprs *l){
     int i=0;
@@ -738,6 +548,11 @@ int count_params(Params *l){
     }
     return i;
 }
+
+void setInvalid(){
+    isValid = FALSE;
+}
+
 
 
 

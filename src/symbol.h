@@ -86,3 +86,6 @@ void 		dump_symbol_table(sym_table *prog);
 
 // To remove tree
 void 		free_tree(sym_table *prog);
+
+sym_table*  gen_sym_table(Program *prog);
+Type get_type(symbol *sym);

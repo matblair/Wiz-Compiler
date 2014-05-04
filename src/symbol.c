@@ -10,6 +10,7 @@
 #include "balanced_bst.h"
 #include "helper.h"
 #include "error_printer.h"
+#include "analyse.h"
 
 
 /*----------------------------------------------------------------------
@@ -24,6 +25,15 @@ int comp_scope(const void *a, const void *b);
 int comp_symbol(const void *a, const void *b);
 char* print_scope(const void *node);
 char* print_symbol(const void *node);
+
+
+void add_bounds_to_symbol(symbol *sym, Intervals *intvls);
+void add_frames_to_stack(scope *t, int size);
+void generate_scope(Proc *proc, sym_table *table);
+void generate_params_symbols(Header *h, scope *sc, sym_table *prog);
+void generate_decls_symbols(Decls *decls, scope *sc, sym_table *table);
+
+
 
 /*----------------------------------------------------------------------
 FUNCTIONS!!!! cOMMENT THIS LATER
@@ -106,6 +116,157 @@ char* get_symbol_id(symbol *a){
 		Param *p = (Param *) a->sym_value;
 		return p->id;
 	}
+}
+void generate_scope(Proc *proc, sym_table *prog){
+    //Create the scope
+    char *scope_id = proc->header->id;
+    scope *s = create_scope(prog->table, scope_id, 
+        proc->header->params, proc->header->line_no);
+
+    if(s != NULL){
+        //Now go through and add all the params and internals
+        generate_params_symbols(proc->header, s, prog);
+        generate_decls_symbols(proc->body->decls, s, prog);
+    } else {
+        scope *s = find_scope(scope_id, prog);
+        print_dupe_proc_errors(proc, s->params, s->line_no, 
+            proc->header->line_no);
+
+        setInvalid();
+    }
+}
+
+sym_table* gen_sym_table(Program *prog){
+    //We walk through each proc, generating a symbol table for it 
+    sym_table *table = initialize_sym_table();
+    //Get our procedures and generate each thing
+    Procs *procs = prog->procedures;
+    while(procs!=NULL){
+        // Get the current proc
+        Proc *current = procs->first;
+        // Generate the scope for this proc
+        generate_scope(current, table);
+        // Continue along
+        procs = procs->rest;    
+    }
+    //dump_symbol_table(table);
+    return table;
+}
+
+void generate_decls_symbols(Decls *decls, scope *sc, sym_table *prog){
+    while(decls!=NULL){
+        // Get current param
+        Decl *decl = decls->first;
+        // Make a symbol
+        symbol *s = checked_malloc(sizeof(symbol));
+        s->sym_kind = SYM_LOCAL;
+        s->sym_value = decl;
+        s->line_no = decl->lineno;
+        s->slot = sc->next_slot;
+        sc->next_slot++;
+        s->type = sym_type_from_ast_type(decl->type);
+        s->used = FALSE;
+        Bound *bound;
+        int frames;
+
+        // create bounds if decl is an array, and add the extra frames needed
+        if (decl->array != NULL) {
+            add_bounds_to_symbol(s, decl->array);
+            bound = s->bounds->first;
+            frames = bound->offset_size * (bound->upper - bound->lower + 1);
+            add_frames_to_stack((scope *) sc, frames - 1);
+        }
+
+        // Insert the symbol
+        if(!insert_symbol(prog, s, sc)){
+            symbol *orig = retrieve_symbol(get_symbol_id(s), sc->id,prog);
+            print_dupe_symbol_errors(get_symbol_id(s), get_type(orig), 
+                get_type(s), s->line_no, orig->line_no);
+           setInvalid();
+            
+        }
+        //Contine along
+        decls = decls->rest;
+    }
+}
+
+// add bounds to symbol (for arrays)
+void
+add_bounds_to_symbol(symbol *sym, Intervals *intvls) {
+    if (intvls == NULL) {
+        sym->bounds = NULL;
+        return; // no more intervals to store!
+    }
+
+    // calculate the rest of the bounds
+    add_bounds_to_symbol(sym, intvls->rest);
+
+    Interval *intvl;
+    Bounds *bounds;
+    Bound *bound;
+    int offset;
+
+    // get the interval we're working with
+    intvl = intvls->first;
+
+    if (sym->bounds != NULL) {
+        bound = sym->bounds->first;
+        offset = (bound->upper) - (bound->lower);
+        offset *= bound->offset_size;
+    } else {
+        offset = 1;
+    }
+
+    // create new bound struct
+    bound = checked_malloc(sizeof(Bound));
+    bound->lower = intvl->lower;
+    bound->upper = intvl->upper;
+    bound->offset_size = offset;
+
+    // add to linked list
+    bounds = checked_malloc(sizeof(Bounds));
+    bounds->rest = sym->bounds;
+    bounds->first = bound;
+    sym->bounds = bounds;
+}
+
+// consume more of the slots, for arrays
+void
+add_frames_to_stack(scope *t, int size) {
+    t->next_slot += size;
+}
+
+
+void generate_params_symbols(Header *h, scope *sc, sym_table *prog){
+    //We go through the params and add a symbol for each one.
+    Params *params = h->params;
+    int line_no = h->line_no;
+    while(params!=NULL){
+        // Get current param
+        Param *p = params->first;
+        // Make a symbol;
+        symbol *s = checked_malloc(sizeof(symbol));
+        if(p->ind == VAL_IND){
+            s->sym_kind = SYM_PARAM_VAL;
+        } else {
+            s->sym_kind = SYM_PARAM_REF;
+        }
+        s->type = sym_type_from_ast_type(p->type);
+        s->slot = sc->next_slot;
+        sc->next_slot++;
+        s->sym_value = p;
+        s->line_no = line_no;
+
+        // Insert the symbol
+        if(!insert_symbol(prog, s, sc)){
+            symbol *orig = retrieve_symbol(get_symbol_id(s), sc->id,prog);
+            print_dupe_symbol_errors(get_symbol_id(s), get_type(orig), 
+                get_type(s), s->line_no, orig->line_no);
+            setInvalid();
+        }
+        //Contine along
+        params = params->rest;
+    }   
 }
 
 
@@ -196,6 +357,19 @@ sym_type_from_ast_type(Type t) {
         default:
             report_error_and_exit("invalid type for symbol!");
             return -1; //can't get here, but otherwise gcc complains
+    }
+}
+
+
+Type get_type(symbol *sym){
+    // Find the second type
+    sym->used = TRUE;
+    if(sym->sym_kind == SYM_PARAM_VAL || sym->sym_kind == SYM_PARAM_REF){
+        Param *p = (Param *) sym->sym_value;
+        return p->type;
+    } else {
+        Decl *d = (Decl *) sym->sym_value;
+        return d->type;
     }
 }
 

@@ -15,3 +15,5 @@
 //Put our value into a void pointer so that we don't have to let
 //main know about our program.
 void* analyse(Program *prog);
+
+void setInvalid();
