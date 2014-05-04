@@ -319,7 +319,9 @@ gen_oz_assign(OzProgram *p, Assign *assign, void *table) {
     // convert to float if needed
     if (sym->type == SYM_REAL && etype == SYM_INT) {
         gen_binop(p, OP_INT_TO_REAL, 0, 0);
-    } else if (assign->asg_ident->indices != NULL){
+    }
+
+    if (assign->asg_ident->indices != NULL){
         //We have an array
         gen_oz_expr_array_addr(p,1,assign->asg_ident, table);
         gen_binop(p, OP_STORE_INDIRECT, 1, 0);
@@ -516,7 +518,7 @@ gen_oz_expr_binop(OzProgram *p, int reg, Expr *expr, void *table) {
     gen_oz_expr(p, reg + 1, expr->e2, table);
 
     // Do we need to worry about converting float to int? yep.
-    if (etype == FLOAT_TYPE) {
+    if (etype != INT_TYPE) {
         // left side of expression
         if (e1type == INT_TYPE) {
             gen_binop(p, OP_INT_TO_REAL, reg, reg);
@@ -526,30 +528,18 @@ gen_oz_expr_binop(OzProgram *p, int reg, Expr *expr, void *table) {
         else if (e2type == INT_TYPE) {
             gen_binop(p, OP_INT_TO_REAL, reg + 1, reg + 1);
         }
-    } else if (etype == BOOL_TYPE && e1type!=BOOL_TYPE && e2type!=BOOL_TYPE){
-        if (e1type == INT_TYPE && e2type == FLOAT_TYPE){
-            if(expr->e1->kind == EXPR_CONST){
-                gen_binop(p, OP_INT_TO_REAL, reg, reg);
-            }
-        } else if (e1type == FLOAT_TYPE && e2type == INT_TYPE){
-            if(expr->e2->kind == EXPR_CONST){
-                gen_binop(p, OP_INT_TO_REAL, reg+1, reg+1);
-            }
-        }
     }
 
     // generate the code
-    if (etype == INT_TYPE) {
+    if (e1type == INT_TYPE && e2type == INT_TYPE) {
         gen_oz_expr_binop_int(p, reg, reg, reg + 1, expr);
     }
-    else if (e1type == BOOL_TYPE) {
-        gen_oz_expr_binop_bool(p, reg, reg, reg + 1, expr);
-    }
-    else if (e1type == INT_TYPE && e2type == INT_TYPE){
-        gen_oz_expr_binop_int(p, reg, reg, reg + 1, expr);
-
-    } else{
+    else if (e1type == FLOAT_TYPE || e2type == FLOAT_TYPE) {
         gen_oz_expr_binop_float(p, reg, reg, reg + 1, expr);
+
+    } else {
+        gen_oz_expr_binop_bool(p, reg, reg, reg + 1, expr);
+
     }
 }
 
@@ -566,10 +556,6 @@ gen_oz_expr_binop_bool(OzProgram *p, int r1, int r2, int r3, Expr *expr) {
 
         default:
             print_expression(stderr, expr,0);
-            printf("\n");
-            printf("Left type is %s\n", typenames[expr->e1->inferred_type]);
-            printf("Right type is %s\n", typenames[expr->e2->inferred_type]);
-            printf("Inferred type is %s\n", typenames[expr->inferred_type]);
 
             report_error_and_exit("invalid op for bool binop expr!");
     }
