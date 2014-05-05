@@ -311,24 +311,23 @@ gen_oz_assign(OzProgram *p, Assign *assign, void *table) {
     gen_comment(p, SECTION_ASSIGN);
 
     symbol *sym = retrieve_symbol_in_scope(assign->asg_ident->id, table);
-    SymType etype = sym_type_from_ast_type(assign->asg_expr->inferred_type);
+    Type etype = assign->asg_expr->inferred_type;
 
     // Evaluate the expression
     gen_oz_expr(p, 0, assign->asg_expr, table);
 
     // convert to float if needed
-    if (sym->type == SYM_REAL && etype == SYM_INT) {
+    if (sym->type == SYM_REAL && etype == INT_TYPE) {
         gen_binop(p, OP_INT_TO_REAL, 0, 0);
     }
 
-    if (assign->asg_ident->indices != NULL){
-        //We have an array
-        gen_oz_expr_array_addr(p,1,assign->asg_ident, table);
+    // Store the value
+    if (assign->asg_ident->kind == EXPR_ARRAY){
+        gen_oz_expr_array_addr(p, 1, assign->asg_ident, table);
         gen_binop(p, OP_STORE_INDIRECT, 1, 0);
-        return;
+    } else {
+        gen_store(p, sym, 0);
     }
-    // store the variable
-    gen_store(p, sym, 0);
 }
 
 void
@@ -509,7 +508,6 @@ gen_oz_expr_array_addr(OzProgram *p, int reg, Expr *a, void *table) {
 
 void
 gen_oz_expr_binop(OzProgram *p, int reg, Expr *expr, void *table) {
-    int etype = expr->inferred_type;
     int e1type = expr->e1->inferred_type;
     int e2type = expr->e2->inferred_type;
 
@@ -517,17 +515,12 @@ gen_oz_expr_binop(OzProgram *p, int reg, Expr *expr, void *table) {
     gen_oz_expr(p, reg, expr->e1, table);
     gen_oz_expr(p, reg + 1, expr->e2, table);
 
-    // Do we need to worry about converting float to int? yep.
-    if (etype != INT_TYPE) {
-        // left side of expression
-        if (e1type == INT_TYPE) {
-            gen_binop(p, OP_INT_TO_REAL, reg, reg);
-        }
-
-        // right side; can't have both inferred int resulting in inferred float
-        else if (e2type == INT_TYPE) {
-            gen_binop(p, OP_INT_TO_REAL, reg + 1, reg + 1);
-        }
+    // deal with operations with both int and float
+    if (e1type == INT_TYPE && e2type == FLOAT_TYPE) {
+        gen_binop(p, OP_INT_TO_REAL, reg, reg);
+    }
+    else if (e1type == FLOAT_TYPE && e2type == INT_TYPE) {
+        gen_binop(p, OP_INT_TO_REAL, reg + 1, reg + 1);
     }
 
     // generate the code
