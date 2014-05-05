@@ -55,7 +55,7 @@ void gen_call_builtin(OzProgram *p, OzBuiltinId id);
 void gen_halt(OzProgram *p);
 void gen_return(OzProgram *p);
 void gen_load(OzProgram *p, int reg, Symbol *sym);
-void gen_store(OzProgram *p, Symbol *sym, int regm);
+void gen_store(OzProgram *p, Symbol *sym, int reg);
 void gen_proc_label(OzProgram *p, char *id);
 void gen_label(OzProgram *p, int id);
 void gen_int_const(OzProgram *p, int reg, int val);
@@ -323,7 +323,12 @@ gen_oz_assign(OzProgram *p, Assign *assign, void *table) {
     }
 
     // store the variable
-    gen_store(p, sym, 0);
+    if (assign->asg_ident->kind == EXPR_ARRAY) {
+        gen_oz_expr_array_addr(p, 1, assign->asg_ident, table);
+        gen_binop(p, OP_STORE_INDIRECT, 1, 0);
+    } else {
+        gen_store(p, sym, 0);
+    }
 }
 
 void
@@ -531,14 +536,14 @@ gen_oz_expr_binop(OzProgram *p, int reg, Expr *expr, void *table) {
     }
 
     // generate the code
-    if (etype == INT_TYPE) {
+    if (e1type == INT_TYPE && e2type == INT_TYPE) {
         gen_oz_expr_binop_int(p, reg, reg, reg + 1, expr);
     }
-    else if (e1type == BOOL_TYPE) {
-        gen_oz_expr_binop_bool(p, reg, reg, reg + 1, expr);
+    else if (e1type == FLOAT_TYPE || e2type == FLOAT_TYPE) {
+        gen_oz_expr_binop_float(p, reg, reg, reg + 1, expr);
     }
     else {
-        gen_oz_expr_binop_float(p, reg, reg, reg + 1, expr);
+        gen_oz_expr_binop_bool(p, reg, reg, reg + 1, expr);
     }
 }
 
