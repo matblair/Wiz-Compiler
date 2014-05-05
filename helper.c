@@ -5,20 +5,13 @@
     Provides helpful functions originally included in wiz.c to be 
     used throughout the wiz compiler.
 -----------------------------------------------------------------------*/
-#include    <string.h>
 #include    <stdlib.h>
-#include 	<stdio.h>
 #include 	"helper.h"
-
-// Report an error to stderr then exit with EXIT_FAILURE.
-void report_error_and_exit(const char *msg){
-    fprintf(stderr, "Error: %s\n", msg);
-    exit(EXIT_FAILURE);
-}
+#include    "error_printer.h"
 
 // Simple safe malloc funciton that will return the requested amount of 
 // memory if available otherwiuse will exit citing failure. Taken from Wiz.c
-void * checked_malloc(size_t num_bytes) {
+void * checked_malloc(int num_bytes) {
     //Memory address
     void *addr;
     // Allocate with malloc

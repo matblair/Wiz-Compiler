@@ -31,8 +31,6 @@ void print_procedures(FILE *fp, Procs *processes);
     printing of a procedure
 -----------------------------------------------------------------------*/
 
-void print_header(FILE *fp, Header *header);
-void print_params(FILE *fp, Params *params);
 void print_body(FILE *fp, Body *body);
 
 /*----------------------------------------------------------------------
@@ -60,9 +58,7 @@ void print_statements(FILE *fp, Stmts *statements, int indents);
     
 void print_binop(FILE *fp, Expr *bin_expr, int prec);
 void print_unop(FILE *fp, Expr *unop_expr, int prec);
-void print_exprs(FILE *fp, Exprs *args);
 void print_expr_list(FILE *fp, Exprs *elems);
-void print_expression(FILE *fp, Expr *expr, int prec);
 void print_constant(FILE *fp, Constant *cons);
 
 /*----------------------------------------------------------------------
@@ -70,7 +66,6 @@ void print_constant(FILE *fp, Constant *cons);
     brackets and printing correct indentation
 -----------------------------------------------------------------------*/
 
-void print_indents(FILE *fp, int indents);
 BOOL is_associative_arithmetic(Expr *expr);
 BOOL is_associative_logical(Expr *expr);
 
@@ -110,7 +105,6 @@ int proc_comparison(const void *a, const void *b){
 // Simple function responsible for sorting all the procedures and 
 // then calling the appropriate printing function on each procedure
 void print_procedures(FILE *fp, Procs *procs){
-
     // Go through and count the number of procedures
     int num_procs=1;
     Procs *rest = procs->rest;

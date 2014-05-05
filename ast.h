@@ -90,7 +90,7 @@ typedef enum {
 } Type;
 
 // Array Values
-#define TYPE_NAMES "bool", "int", "float"
+#define TYPE_NAMES "bool", "int", "float", "string", "invalid"
 // External definitions for array access
 extern const char *typenames[];
 
@@ -131,7 +131,7 @@ struct expr {
     Expr      *e1;          /* for unary and binary operators */
     Expr      *e2;          /* for binary operators */
     Exprs     *indices;     /* for arrays */
-    Type      inferred_type; /* for compilation */
+    Type      inferred_type;
 };
 
 struct exprs {
@@ -221,7 +221,7 @@ struct func {
 
 typedef union {
     Assign    assign;
-    Stmts     *stmts;
+    // Stmts     *stmts;
     Cond      cond;
     Expr      *read;
     Expr      *write;
@@ -260,6 +260,7 @@ struct params {
 struct header {
    char      *id;
    Params    *params;
+   int       line_no;
 };
 
 struct body {
@@ -268,7 +269,6 @@ struct body {
 };
 
 struct proc {
-    int      lineno;
     Header   *header;
     Body     *body;
 };

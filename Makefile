@@ -1,8 +1,8 @@
 HDR =	wiz.h piz.h ast.h oztree.h pretty.h std.h missing.h helper.h bbst.h\
-        symtable.h analyse.h codegen.h
+        symbol.h analyse.h codegen.h error_printer.h wizoptimiser.h
 
-OBJ =	wiz.o piz.o liz.o ast.o pretty.o helper.o bbst.o symtable.o analyse.o\
-        codegen.o oztree.o
+OBJ =	wiz.o piz.o liz.o ast.o pretty.o helper.o bbst.o symbol.o analyse.o\
+        codegen.o oztree.o error_printer.o wizoptimiser.o
 
 CC = 	gcc -Wall -Wextra -DDEBUG
 

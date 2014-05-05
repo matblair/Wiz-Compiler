@@ -7,9 +7,11 @@
 
 #include <stdio.h>
 #include "ast.h"
-#include "symtable.h"
+#include "symbol.h"
 #include "oztree.h"
 #include "helper.h"
+#include "error_printer.h"
+#include "pretty.h"
 
 #define PROGENTRY "main"
 
@@ -35,11 +37,10 @@ void gen_oz_call(OzProgram *p, Function *call, void *tables, void *table);
 void gen_oz_cond(OzProgram *p, Cond *cond, void *tables, void *table);
 void gen_oz_while(OzProgram *p, While *loop, void *tables, void *table);
 
+
 void gen_oz_expr(OzProgram *p, int reg, Expr *expr, void *table);
 void gen_oz_expr_id(OzProgram *p, int reg, char *id, void *table);
 void gen_oz_expr_const(OzProgram *p, int reg, Constant *constant);
-void gen_oz_expr_array_val(OzProgram *p, int reg, Expr *a, void *table);
-void gen_oz_expr_array_addr(OzProgram *p, int reg, Expr *a, void *table);
 void gen_oz_expr_binop(OzProgram *p, int reg, Expr *expr, void *table);
 void gen_oz_expr_binop_bool(OzProgram *p, int r1, int r2, int r3, Expr *expr);
 void gen_oz_expr_binop_int(OzProgram *p, int r1, int r2, int r3, Expr *expr);
@@ -54,8 +55,10 @@ void gen_call(OzProgram *p, char *id);
 void gen_call_builtin(OzProgram *p, OzBuiltinId id);
 void gen_halt(OzProgram *p);
 void gen_return(OzProgram *p);
-void gen_load(OzProgram *p, int reg, Symbol *sym);
-void gen_store(OzProgram *p, Symbol *sym, int reg);
+void gen_oz_expr_array_val(OzProgram *p, int reg, Expr *a, void *table);
+void gen_oz_expr_array_addr(OzProgram *p, int reg, Expr *a, void *table);
+void gen_load(OzProgram *p, int reg, symbol *sym);
+void gen_store(OzProgram *p, symbol *sym, int regm);
 void gen_proc_label(OzProgram *p, char *id);
 void gen_label(OzProgram *p, int id);
 void gen_int_const(OzProgram *p, int reg, int val);
@@ -96,7 +99,7 @@ gen_oz_procs(OzProgram *p, Procs *procs, void *tables) {
     }
 
     Proc *proc = procs->first;
-    void *table = find_symtable(tables, proc->header->id);
+    void *table = find_scope(proc->header->id, tables);
 
     gen_proc_label(p, proc->header->id);
     gen_oz_prologue(p, proc->header->params, proc->body->decls, table);
@@ -124,12 +127,11 @@ gen_oz_epilogue(OzProgram *p, void *table) {
 void
 gen_oz_params(OzProgram *p, Params *params, void *table) {
     Param *param;
-    Symbol *sym;
+    symbol *sym;
     int count = 0;
-
     while (params != NULL) {
         param = params->first;
-        sym = find_symbol_by_id(table, param->id);
+        sym = retrieve_symbol_in_scope(param->id,(scope *)table);
 
         gen_binop(p, OP_STORE, sym->slot, count);
 
@@ -142,19 +144,21 @@ void
 gen_oz_decls(OzProgram *p, Decls *decls, void *table) {
     Decls *ds;
     Decl *decl;
-    Symbol *sym;
+    symbol *sym;
     int count = 0;
+    int reg;
 
     BOOL ints, reals;
     ints = reals = FALSE;
-    int int_reg, real_reg, reg;
+    int int_reg, real_reg;
 
     // figure out which registers we need to initialise
     ds = decls;
     while (ds != NULL) {
         decl = ds->first;
-        sym = find_symbol_by_id(table, decl->id);
-
+          
+        sym = retrieve_symbol_in_scope(decl->id,(scope *)table);
+        
         if (!reals && sym->type == SYM_REAL) {
             reals = TRUE;
             real_reg = count++;
@@ -181,7 +185,7 @@ gen_oz_decls(OzProgram *p, Decls *decls, void *table) {
     ds = decls;
     while (ds != NULL) {
         decl = ds->first;
-        sym = find_symbol_by_id(table, decl->id);
+        sym = retrieve_symbol_in_scope(decl->id,(scope *) table);
 
         if (sym->type == SYM_REAL) {
             reg = real_reg;
@@ -199,14 +203,10 @@ gen_oz_decls(OzProgram *p, Decls *decls, void *table) {
             }
         }
 
+
         ds = ds->rest;
     }
 }
-
-
-/*-----------------------------------------------------------------------------
- * Generate Oz code structures from AST statements
- *---------------------------------------------------------------------------*/
 
 void
 gen_oz_stmts(OzProgram *p, Stmts *stmts, void *tables, void *table) {
@@ -253,7 +253,6 @@ gen_oz_write(OzProgram *p, Expr *write, void *table) {
     gen_comment(p, SECTION_WRITE);
 
     gen_oz_expr(p, 0, write, table);
-
     switch(write->inferred_type) {
         case BOOL_TYPE:
             gen_call_builtin(p, BUILTIN_PRINT_BOOL);
@@ -280,7 +279,7 @@ void
 gen_oz_read(OzProgram *p, Expr *read, void *table) {
     gen_comment(p, SECTION_READ);
 
-    Symbol *sym = find_symbol_by_id(table, read->id);
+    symbol *sym = retrieve_symbol_in_scope(read->id, table);
 
     switch(sym->type) {
         case SYM_BOOL:
@@ -311,7 +310,7 @@ void
 gen_oz_assign(OzProgram *p, Assign *assign, void *table) {
     gen_comment(p, SECTION_ASSIGN);
 
-    Symbol *sym = find_symbol_by_id(table, assign->asg_ident->id);
+    symbol *sym = retrieve_symbol_in_scope(assign->asg_ident->id, table);
     SymType etype = sym_type_from_ast_type(assign->asg_expr->inferred_type);
 
     // Evaluate the expression
@@ -322,22 +321,24 @@ gen_oz_assign(OzProgram *p, Assign *assign, void *table) {
         gen_binop(p, OP_INT_TO_REAL, 0, 0);
     }
 
-    // store the variable
-    if (assign->asg_ident->kind == EXPR_ARRAY) {
-        gen_oz_expr_array_addr(p, 1, assign->asg_ident, table);
+    if (assign->asg_ident->indices != NULL){
+        //We have an array
+        gen_oz_expr_array_addr(p,1,assign->asg_ident, table);
         gen_binop(p, OP_STORE_INDIRECT, 1, 0);
-    } else {
-        gen_store(p, sym, 0);
+        return;
     }
+    // store the variable
+    gen_store(p, sym, 0);
 }
 
 void
 gen_oz_call(OzProgram *p, Function *call, void *tables, void *table) {
     gen_comment(p, SECTION_CALL);
 
-    void *call_table = find_symtable(tables, call->id);
-    Symbols *param_syms = param_symbols_from_table(call_table);
-    Symbol *param_sym, *arg_sym;
+    scope *call_table = find_scope(call->id, tables);
+    Params *params = call_table->params;
+    Param *param;
+    symbol *arg_sym;
     int reg = 0;
     Exprs *args = call->args;
     Expr *arg;
@@ -345,24 +346,23 @@ gen_oz_call(OzProgram *p, Function *call, void *tables, void *table) {
     // Store all the args in registers
     while (args != NULL) {
         arg = args->first;
-        param_sym = param_syms->first;
+        param = params->first;
 
         // see if we're passing by ref or val
-        if (param_sym->kind == SYM_PARAM_REF) {
+        if (param->ind == REF_IND) {
             if (arg->kind == EXPR_ARRAY) {
                 gen_oz_expr_array_addr(p, reg, arg, table);
             } else {
-                arg_sym = find_symbol_by_id(table, arg->id);
+                arg_sym = retrieve_symbol_in_scope(arg->id, table);
                 gen_binop(p, OP_LOAD_ADDRESS, reg, arg_sym->slot);
-            }
-        }
-        else {
+            }    
+        } else {
             gen_oz_expr(p, reg, arg, table);
         }
 
         // other args
         reg++;
-        param_syms = param_syms->rest;
+        params = params->rest;
         args = args->rest;
     }
 
@@ -412,11 +412,6 @@ gen_oz_while(OzProgram *p, While *loop, void *tables, void *table) {
     gen_label(p, after_label);                  // exit jump point
 }
 
-
-/*-----------------------------------------------------------------------------
- * Generate Oz code structures from AST expressions
- *---------------------------------------------------------------------------*/
-
 void
 gen_oz_expr(OzProgram *p, int reg, Expr *expr, void *table) {
     switch(expr->kind) {
@@ -447,7 +442,7 @@ gen_oz_expr(OzProgram *p, int reg, Expr *expr, void *table) {
 
 void
 gen_oz_expr_id(OzProgram *p, int reg, char *id, void *table) {
-    Symbol *sym = find_symbol_by_id(table, id);
+    symbol *sym = retrieve_symbol_in_scope(id, table);
     gen_load(p, reg, sym);
 }
 
@@ -487,7 +482,7 @@ gen_oz_expr_array_val(OzProgram *p, int reg, Expr *a, void *table) {
 // store the address of an array value in a register
 void
 gen_oz_expr_array_addr(OzProgram *p, int reg, Expr *a, void *table) {
-    Symbol *sym = find_symbol_by_id(table, a->id);
+    symbol *sym = retrieve_symbol_in_scope(a->id, table);
     Bounds *bounds = sym->bounds;
     Bound *bound;
     Exprs *indices = a->indices;
@@ -522,7 +517,7 @@ gen_oz_expr_binop(OzProgram *p, int reg, Expr *expr, void *table) {
     gen_oz_expr(p, reg, expr->e1, table);
     gen_oz_expr(p, reg + 1, expr->e2, table);
 
-    // Do we need to worry about converting float to int?
+    // Do we need to worry about converting float to int? yep.
     if (etype != INT_TYPE) {
         // left side of expression
         if (e1type == INT_TYPE) {
@@ -541,9 +536,10 @@ gen_oz_expr_binop(OzProgram *p, int reg, Expr *expr, void *table) {
     }
     else if (e1type == FLOAT_TYPE || e2type == FLOAT_TYPE) {
         gen_oz_expr_binop_float(p, reg, reg, reg + 1, expr);
-    }
-    else {
+
+    } else {
         gen_oz_expr_binop_bool(p, reg, reg, reg + 1, expr);
+
     }
 }
 
@@ -559,6 +555,8 @@ gen_oz_expr_binop_bool(OzProgram *p, int r1, int r2, int r3, Expr *expr) {
             break;
 
         default:
+            print_expression(stderr, expr,0);
+
             report_error_and_exit("invalid op for bool binop expr!");
     }
 }
@@ -664,7 +662,7 @@ gen_oz_expr_unop(OzProgram *p, int reg, Expr *expr, void *table) {
     Type t = expr->inferred_type;
 
     // Eval sub expression
-    gen_oz_expr(p, reg, expr->e1, table);
+    gen_oz_expr(p,reg, expr->e1, table);
 
     // Do we need to worry about converting float to int?
     if (t == FLOAT_TYPE && expr->e1->inferred_type == INT_TYPE) {
@@ -672,21 +670,22 @@ gen_oz_expr_unop(OzProgram *p, int reg, Expr *expr, void *table) {
     }
 
     // generate the op of this expr
-    if (t == BOOL_TYPE && expr->binop == UNOP_NOT) {
+    if (t == BOOL_TYPE && expr->unop == UNOP_NOT) {
         gen_binop(p, OP_NOT, reg, reg);
     }
 
-    else if (t == INT_TYPE && expr->binop == UNOP_MINUS) {
+    else if (t == INT_TYPE && expr->unop == UNOP_MINUS) {
         gen_int_const(p, reg + 1, 0);
         gen_triop(p, OP_SUB_INT, reg, reg + 1, reg);
     }
 
-    else if (t == FLOAT_TYPE && expr->binop == UNOP_MINUS) {
+    else if (t == FLOAT_TYPE && expr->unop == UNOP_MINUS) {
         gen_real_const(p, reg + 1, 0.0f);
         gen_triop(p, OP_SUB_REAL, reg, reg + 1, reg);
     }
 
     else {
+        fprintf(stderr,"Type is %s for %s\n", typenames[t], expr->id);
         report_error_and_exit("invalid op for unop expr!");
     }
 }
@@ -775,8 +774,8 @@ gen_return(OzProgram *p) {
 }
 
 void
-gen_load(OzProgram *p, int reg, Symbol *sym) {
-    if (sym->kind == SYM_PARAM_REF) {
+gen_load(OzProgram *p, int reg, symbol *sym) {
+    if (sym->sym_kind == SYM_PARAM_REF) {
         gen_binop(p, OP_LOAD_INDIRECT, reg, sym->slot);
     } else {
         gen_binop(p, OP_LOAD, reg, sym->slot);
@@ -784,13 +783,16 @@ gen_load(OzProgram *p, int reg, Symbol *sym) {
 }
 
 void
-gen_store(OzProgram *p, Symbol *sym, int reg) {
-    if (sym->kind == SYM_PARAM_REF) {
-        gen_binop(p, OP_STORE_INDIRECT, sym->slot, reg);
+gen_store(OzProgram *p, symbol *sym, int reg) {
+    if (sym->sym_kind == SYM_PARAM_REF) {
+        //We need to make sure the address is in a register.
+        gen_binop(p, OP_LOAD, reg+1, sym->slot);
+        gen_binop(p, OP_STORE_INDIRECT, reg+1, reg);
     } else {
         gen_binop(p, OP_STORE, sym->slot, reg);
     }
 }
+
 
 void
 gen_proc_label(OzProgram *p, char *id) {

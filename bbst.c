@@ -1,203 +1,190 @@
 /* bbst.c */
 
-/* Dictionary structure represented as a self balancing binary search tree.
- *
- * Some code provided by Tony Wirth, 2009
- * 
- * Implemented AA Tree method, as explained at:
- * http://eternallyconfuzzled.com/tuts/datastructures/jsw_tut_andersson.aspx
- */
+/*-----------------------------------------------------------------------
+    Developed by: #undef TEAMNAME
+    Provides a symbol table for use in semantic analysis and compilation
+    of programs from the wiz languge to Oz machine code.
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <limits.h>
+    The table is laid out as follows
 
+-----------------------------------------------------------------------*/
 #include "bbst.h"
 #include "helper.h"
 #include "std.h"
 
-#define LEFT 0
-#define RIGHT 1
-#define BINARY 2
-#define MINKEY ""
+/*----------------------------------------------------------------------
+    Internal structures.  
+-----------------------------------------------------------------------*/
+#define EXTRA 10
+#define INITAL_LEVEL 0
 
-typedef struct bnoode{
-    char   *key;
-    void   *value;
-    int    level;
-    struct bnoode *c[BINARY];
-} bnode;
+typedef struct node {
+    void *current;
+    struct node *left;
+    struct node *right;
+    int level;
+} t_node;
 
 typedef struct parentchild{
-    bnode *parent;  // pointer to parent node of node of interest
-    int   which;    // tells us whether it is a left or right child
+    t_node *parent; // pointer to parent node of node of interest
+    int which;  // tells us whether it is a left or right child
 } pc;
 
-/*-----------------------------------------------------------------------------
- * Function prototypes for internal functions
- *---------------------------------------------------------------------------*/
-BOOL locate(pc *, char *);
-void set_dummy(pc *, bnode *);
-void *skew(bnode *);
-void *split(bnode *);
-bnode *insertandbalance(bnode *, char *, void *);
+/*----------------------------------------------------------------------
+    Internal function definitions.  
+-----------------------------------------------------------------------*/
+t_node* recursive_find(void *id, t_node *head,
+                       int (*comp)(const void *, const void *));
+t_node* skew(t_node *root);
+t_node* split(t_node *root);
+t_node* make_node(void *value, int level);
 
+/*----------------------------------------------------------------------
+    Functions
+-----------------------------------------------------------------------*/
 
-/*-----------------------------------------------------------------------------
- * Functions from header file
- *---------------------------------------------------------------------------*/
-
-// create an empty bst that has a dummy head node
-void *
-bbst_initialise(void)
-{
-    bnode *dummy; // its right pointer points to the root (when it exists)
-    dummy = (bnode *) checked_malloc(sizeof(bnode));
-    dummy->key = MINKEY;    // yes, this is a dummy head node!
-    dummy->c[LEFT] = NULL;
-    dummy->c[RIGHT] = NULL;
-    dummy->level=1;
-
-    return (void *) dummy;
+void* bbst_intialize(){
+    //Here we create a symbol table with no scopes (i.e. a dummy head);
+    t_node *table = make_node(NULL, INITAL_LEVEL);
+    //Return the initialized table
+    return table;
 }
 
 
-// here we insert a (new) record into the bst
-void
-bbst_insert(void *dict, char *key, void *value)
-{
-    bnode *dummy = (bnode *) dict;
-    dummy->c[RIGHT] = insertandbalance(dummy->c[RIGHT], key, value);
-    return;
+t_node* make_node(void *value, int level){
+    t_node *node = (t_node *) checked_malloc(sizeof(t_node));
+    node->current = value;
+    node->left = NULL;
+    node->right = NULL;
+    node->level = level;
+    return node;
 }
 
-// given a key, put the value corrsponding to it in the location referenced
-void *
-bbst_find(void *dict, char *key)
+void* bbst_find_node(void *id, void *t, int (*comp)(const void *,const void *))
 {
-    bnode *dummy = (bnode *) dict;
-    pc pw;
-    pc *p = &pw;
+    // Cast to tree
+    t_node *tree = (t_node *) t;
+    // Find the node
+    t_node *node = recursive_find(id, tree, comp);
 
-    set_dummy(p, dummy);
+    // Return the node
+    return (void *) node;
+}
 
-    // find out the appropriate location of where this key should be
-    if(locate(p, key)){
-        return p->parent->c[p->which]->value;
-    } else {
+t_node* 
+recursive_find(void *id, t_node *head, int (*comp)(const void *,const void *)){
+    if(head == NULL){
+        //Ooops we have fallen off the tree.
         return NULL;
+    } 
+    int comparison = (*comp)(id, head->current);
+    if(comparison > 0){
+        return recursive_find(id,head->right,comp); // in tree
+    } else if(comparison < 0){  
+        return recursive_find(id,head->left,comp);
     }
+    // if we have reached here, then we have found the key
+    return head->current;
+}
+
+// A recursive implementation of insertion in a binary tree, it's easier to keep 
+// track of the skew and split operations applying them like this.
+void* 
+bbst_insert(void* search, void *key, void *value,int (*comp)(const void *,const void *)){
+    // If the pointer is NULL   
+    if (search == NULL) {
+        t_node* new_node = make_node(value,1);
+        return (void *)new_node;
+    }
+
+    t_node *head = (t_node *) search;
+    
+    // If we haven't found it then we have to go fishing!
+    // We determine the direction we set off using our handy built in key_comp function
+    // If key compare shows smaller go left, else go right, like a recursive (i.e. lazy)
+    // binary search.
+    int side = (*comp)(key,head->current);
+    if(side == 0){ // Then the keys are identical so we should update the records.
+        head->current = value;
+    } else { 
+        if(side>0) {
+            head->right = bbst_insert(head->right,key,value,comp);
+        }
+        else {
+            head->left = bbst_insert(head->left,key,value,comp);;
+        }
+                
+        //Balance on the way back up (I tried this using an array of pointers but kept getting
+        // seg faults, I was trying to avoid recursion for performance speed but couldn't get it)
+        
+        head = skew(head);
+        head = split(head);
+    }
+    
+    return (void *) head;   
 }
 
 
-/*-----------------------------------------------------------------------------
- * Internal functions
- *---------------------------------------------------------------------------*/
+// Performs a simple skew operation on the given node pointer.
+// After checking that it is safe to do so
 
-// Implementations of iterative skew() and split()
-void *
-skew(bnode *root) {
+t_node *skew(t_node *root){
     // Ensure we're not trying to skew at the end of the tree, and that a skew is
     // actually needed
-    if (root->c[LEFT] != NULL && root->c[LEFT]->level == root->level) {
-        bnode *temp = root->c[LEFT];
-        root->c[LEFT] = temp->c[RIGHT];
-        temp->c[RIGHT] = root;
+    if (root->left != NULL && root->left->level == root->level) {
+        t_node *temp = root->left;
+        root->left = temp->right;
+        temp->right = root;
         root = temp;
     }
     return root;
 }
 
-void *
-split(bnode *root) {
-    // Before splitting, make sure that it's valid to look further down the tree
-    if (root->c[RIGHT] == NULL || root->c[RIGHT]->c[RIGHT] == NULL) return root;
+// Performs a rotation like operation (splitting) after checking the two 
+// conditions that require it are satisfied.
+t_node *split(t_node *root){
+     // Before splitting, make sure that it's valid to look further down the tree
+    if (root->right == NULL || root->right->right == NULL) return root;
     // Okay, now do all the work
-    if (root->c[RIGHT]->c[RIGHT]->level == root->level) {
-        bnode *temp = root->c[RIGHT];
-        root->c[RIGHT] = temp->c[LEFT];
-        temp->c[LEFT] = root;
+    if (root->right->right->level == root->level) {
+        t_node *temp = root->right;
+        root->right = temp->left;
+        temp->left = root;
         root = temp;
         (root->level)++;
     }
-    return root;
+    return root; // Return root, if condition one and two are met a split will have been performed,
+    // otherwise the pointer will not have been changed.
 }
 
-// find the location of the key: if it is not present, the returned
-// pc should have now set to NULL and parent/which set up so that the key
-// would be inserted as the 'which' child of parent.
-BOOL
-locate(pc *p, char *key)
+
+void bbst_dump_it(void *t, int offset, char* (*p_node)(const void *node))
 {
-    bnode *this = p->parent->c[p->which];    // pointer to the child of interest
-    int result;
+    t_node *tree = (t_node *)t;
+    if(tree->right != NULL){
+        bbst_dump_it(tree->right,offset+EXTRA, p_node);
+    } 
+    char *s = p_node(tree->current);
+    printf("%*s%s\n",offset,"",s);
 
-    if(this == NULL){        // if we have fallen off the tree
-        return FALSE;    // the key is not present, but
-                // return this location, where it
-            // *should* be
+    if(tree->left != NULL){
+        bbst_dump_it(tree->left,offset+EXTRA, p_node);
     }
-
-    result = strcmp(key, this->key);
-
-    if(result < 0){
-        p->parent = this;
-        p->which = LEFT;
-        return locate(p, key);
-    }
-
-    if(result > 0){
-        p->parent = this;
-        p->which = RIGHT;
-        return locate(p, key);
-    }
-
-    // if we have reached here, then we have found the key
-    return TRUE;
 }
 
-// Inserts and balances as it goes, based on the AA Tree model
-bnode *
-insertandbalance(bnode *root, char *key, void *value)
-{
-    int result, which;
+void  bbst_map(void *t, void (*map_func)(const void *node)){
+    t_node *tree = (t_node *)t;
+    if(tree->right != NULL){
+        bbst_map(tree->right,map_func);
+    } 
+    (*map_func)(tree->current);
 
-    // If pointer is to NULL we have found where to insert
-    if (root == NULL) {
-        bnode *new;
-        new = (bnode *) checked_malloc(sizeof(bnode));
-        new->key = key;
-        new->value = value;
-        new->level = 1;
-        new->c[LEFT] = NULL;
-        new->c[RIGHT] = NULL;
-        return new;
-    }
-
-    // Haven't yet found where to insert, so keep looking
-    // Determine whether we will look to the right or the left
-    result = strcmp(key, root->key);
-
-    if (result == 0) {
-        root->value = value;
-
-    } else {
-        if (result < 0){
-            which = LEFT;
-        } else {
-            which = RIGHT;
-        }
-        root->c[which] = insertandbalance(root->c[which], key, value);
-        root = skew(root);
-        root = split(root);
-    }
-    return root;
+    if(tree->left != NULL){
+        bbst_map(tree->left,map_func);
+    }   
 }
 
-void
-set_dummy(pc *p, bnode *dummy)
-{
-    p->parent = dummy;
-    p->which = RIGHT;
-}
+
+
+
+

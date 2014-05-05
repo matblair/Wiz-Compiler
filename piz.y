@@ -141,21 +141,21 @@ procs
       }
 
 proc
-  : PROC_TOKEN get_lineno header body END_TOKEN
+  : PROC_TOKEN header body END_TOKEN
         {
           $$ = allocate(sizeof(struct proc));
-          $$->lineno = $2;
-          $$->header = $3;
-          $$->body = $4;
+          $$->header = $2;
+          $$->body = $3;
         }
     ;
 
 header 
-    : IDENT_TOKEN '(' parameter_list ')'
+    : IDENT_TOKEN '(' parameter_list ')' get_lineno
         {
           $$ = allocate(sizeof(struct header));
           $$->id = $1;
           $$->params = $3;
+          $$->line_no = $5;
         } 
       ;
 
