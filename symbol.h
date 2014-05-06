@@ -32,7 +32,7 @@ typedef struct bbounds {
 } Bounds;
 
 typedef struct symbol_data{
-    SymbolKind  sym_kind;
+    SymbolKind  kind;
     SymType     type;
     void        *sym_value;
     int         line_no;

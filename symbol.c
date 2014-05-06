@@ -26,7 +26,6 @@ int comp_symbol(const void *a, const void *b);
 char* print_scope(const void *node);
 char* print_symbol(const void *node);
 
-
 void add_bounds_to_symbol(symbol *sym, Intervals *intvls);
 void add_frames_to_stack(scope *t, int size);
 void generate_scope(Proc *proc, sym_table *table);
@@ -113,7 +112,7 @@ insert_symbol(sym_table *prog, symbol *sym, scope *s) {
 
 char *
 get_symbol_id(symbol *a) {
-    if(a->sym_kind == SYM_LOCAL){
+    if(a->kind == SYM_LOCAL){
         //Then we have a decl
         Decl *d = (Decl *) a->sym_value;
         return d->id;
@@ -169,7 +168,7 @@ generate_decls_symbols(Decls *decls, scope *sc, sym_table *prog) {
         Decl *decl = decls->first;
         // Make a symbol
         symbol *s = checked_malloc(sizeof(symbol));
-        s->sym_kind = SYM_LOCAL;
+        s->kind = SYM_LOCAL;
         s->sym_value = decl;
         s->line_no = decl->lineno;
         s->slot = sc->next_slot;
@@ -258,9 +257,9 @@ generate_params_symbols(Header *h, scope *sc, sym_table *prog) {
         // Make a symbol;
         symbol *s = checked_malloc(sizeof(symbol));
         if(p->ind == VAL_IND){
-            s->sym_kind = SYM_PARAM_VAL;
+            s->kind = SYM_PARAM_VAL;
         } else {
-            s->sym_kind = SYM_PARAM_REF;
+            s->kind = SYM_PARAM_REF;
         }
         s->type = sym_type_from_ast_type(p->type);
         s->slot = sc->next_slot;
@@ -386,7 +385,7 @@ Type
 get_type(symbol *sym) {
     // Find the second type
     sym->used = TRUE;
-    if(sym->sym_kind == SYM_PARAM_VAL || sym->sym_kind == SYM_PARAM_REF){
+    if(sym->kind == SYM_PARAM_VAL || sym->kind == SYM_PARAM_REF){
         Param *p = (Param *) sym->sym_value;
         return p->type;
     } else {

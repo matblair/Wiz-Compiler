@@ -282,7 +282,7 @@ analyse_function(Function *f, sym_table *prog, char *scope_id, int line_no){
 char* get_type_string(symbol *sym){
     // Find the second type
     char *type = checked_malloc(16 * sizeof(char));
-    if(sym->sym_kind == SYM_PARAM_VAL || sym->sym_kind == SYM_PARAM_REF){
+    if(sym->kind == SYM_PARAM_VAL || sym->kind == SYM_PARAM_REF){
         Param *p = (Param *) sym->sym_value;
         sprintf(type, "%s parameter", typenames[p->type]);
     } else {

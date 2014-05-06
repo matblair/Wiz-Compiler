@@ -57,8 +57,6 @@ void gen_halt(OzProgram *p);
 void gen_return(OzProgram *p);
 void gen_oz_expr_array_val(OzProgram *p, int reg, Expr *a, void *table);
 void gen_oz_expr_array_addr(OzProgram *p, int reg, Expr *a, void *table);
-void gen_load(OzProgram *p, int reg, symbol *sym);
-void gen_store(OzProgram *p, symbol *sym, int regm);
 void gen_proc_label(OzProgram *p, char *id);
 void gen_label(OzProgram *p, int id);
 void gen_int_const(OzProgram *p, int reg, int val);
@@ -203,7 +201,6 @@ gen_oz_decls(OzProgram *p, Decls *decls, void *table) {
             }
         }
 
-
         ds = ds->rest;
     }
 }
@@ -301,8 +298,13 @@ gen_oz_read(OzProgram *p, Expr *read, void *table) {
     if (read->kind == EXPR_ARRAY) {
         gen_oz_expr_array_addr(p, 1, read, table);
         gen_binop(p, OP_STORE_INDIRECT, 1, 0);
-    } else {
-        gen_store(p, sym, 0);
+    }
+    else if (sym->kind == SYM_PARAM_REF) {
+        gen_binop(p, OP_LOAD, 1, sym->slot);
+        gen_binop(p, OP_STORE_INDIRECT, 1, 0);
+    }
+    else {
+        gen_binop(p, OP_STORE, sym->slot, 0);
     }
 }
 
@@ -325,8 +327,13 @@ gen_oz_assign(OzProgram *p, Assign *assign, void *table) {
     if (assign->asg_ident->kind == EXPR_ARRAY){
         gen_oz_expr_array_addr(p, 1, assign->asg_ident, table);
         gen_binop(p, OP_STORE_INDIRECT, 1, 0);
-    } else {
-        gen_store(p, sym, 0);
+    }
+    else if (sym->kind == SYM_PARAM_REF) {
+        gen_binop(p, OP_LOAD, 1, sym->slot);
+        gen_binop(p, OP_STORE_INDIRECT, 1, 0);
+    }
+    else {
+        gen_binop(p, OP_STORE, sym->slot, 0);
     }
 }
 
@@ -349,16 +356,26 @@ gen_oz_call(OzProgram *p, Function *call, void *tables, void *table) {
 
         // see if we're passing by ref or val
         if (param->ind == REF_IND) {
-            if (arg->kind == EXPR_ARRAY) {
+            arg_sym = retrieve_symbol_in_scope(arg->id, table);
+
+            if (arg_sym->kind == SYM_PARAM_REF) {
+                gen_binop(p, OP_LOAD, reg, arg_sym->slot);
+            }
+            else if (arg->kind == EXPR_ARRAY) {
                 gen_oz_expr_array_addr(p, reg, arg, table);
-            } else {
-                arg_sym = retrieve_symbol_in_scope(arg->id, table);
+            }
+            else {
                 gen_binop(p, OP_LOAD_ADDRESS, reg, arg_sym->slot);
             }    
-        } else {
-            gen_oz_expr(p, reg, arg, table);
         }
-
+        else {
+            gen_oz_expr(p, reg, arg, table);
+            // are we passing an int value to a float param?
+            if (arg->inferred_type == INT_TYPE && param->type == FLOAT_TYPE) {
+                gen_binop(p, OP_INT_TO_REAL, reg, reg);
+            }
+        }
+        
         // other args
         reg++;
         params = params->rest;
@@ -442,7 +459,13 @@ gen_oz_expr(OzProgram *p, int reg, Expr *expr, void *table) {
 void
 gen_oz_expr_id(OzProgram *p, int reg, char *id, void *table) {
     symbol *sym = retrieve_symbol_in_scope(id, table);
-    gen_load(p, reg, sym);
+
+    if (sym->kind == SYM_PARAM_REF) {
+        gen_binop(p, OP_LOAD_INDIRECT, reg, sym->slot);
+    }
+    else {
+        gen_binop(p, OP_LOAD, reg, sym->slot);
+    }
 }
 
 void
@@ -765,27 +788,6 @@ gen_return(OzProgram *p) {
     OzOp *op = new_op(p);
     op->code = OP_RETURN;
 }
-
-void
-gen_load(OzProgram *p, int reg, symbol *sym) {
-    if (sym->sym_kind == SYM_PARAM_REF) {
-        gen_binop(p, OP_LOAD_INDIRECT, reg, sym->slot);
-    } else {
-        gen_binop(p, OP_LOAD, reg, sym->slot);
-    }
-}
-
-void
-gen_store(OzProgram *p, symbol *sym, int reg) {
-    if (sym->sym_kind == SYM_PARAM_REF) {
-        //We need to make sure the address is in a register.
-        gen_binop(p, OP_LOAD, reg+1, sym->slot);
-        gen_binop(p, OP_STORE_INDIRECT, reg+1, reg);
-    } else {
-        gen_binop(p, OP_STORE, sym->slot, reg);
-    }
-}
-
 
 void
 gen_proc_label(OzProgram *p, char *id) {

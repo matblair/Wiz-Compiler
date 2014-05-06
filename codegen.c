@@ -105,7 +105,7 @@ print_op(FILE *fp, OzOp *op) {
             break;
 
         case OP_RETURN:
-            fprintf(fp, "%*s\n", INSTRWIDTH, "return");
+            fprintf(fp, "%s\n", "return");
             break;
 
         case OP_BRANCH_ON_TRUE:

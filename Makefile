@@ -4,7 +4,7 @@ HDR =	wiz.h piz.h ast.h oztree.h pretty.h std.h missing.h helper.h bbst.h\
 OBJ =	wiz.o piz.o liz.o ast.o pretty.o helper.o bbst.o symbol.o analyse.o\
         codegen.o oztree.o error_printer.o wizoptimiser.o
 
-CC = 	gcc -Wall -Wextra -DDEBUG
+CC = 	gcc -Wall -Wextra
 
 wiz: $(OBJ)
 	$(CC) -o wiz $(OBJ)
