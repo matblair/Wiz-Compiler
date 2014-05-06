@@ -49,7 +49,6 @@ typedef struct scope_data {
     int next_slot;
 } scope;
 
-
 typedef struct symbol_table {
     void *table;
     BOOL initialised;
@@ -85,6 +84,9 @@ void dump_symbol_table(sym_table *prog);
 
 // To remove tree
 void free_tree(sym_table *prog);
+
+void* create_expression_table(Expr *e);
+symbol* retrieve_symbol_in_expr_table(void *expr_table, char *id);
 
 sym_table* gen_sym_table(Program *prog);
 Type get_type(symbol *sym);

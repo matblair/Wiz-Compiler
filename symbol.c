@@ -32,7 +32,8 @@ void generate_scope(Proc *proc, sym_table *table);
 void generate_params_symbols(Header *h, scope *sc, sym_table *prog);
 void generate_decls_symbols(Decls *decls, scope *sc, sym_table *table);
 SymType sym_type_from_ast_type(Type t);
-
+void find_and_insert_expr_symbols(Expr *e, void *table);
+void find_and_insert_statement_symbols(Expr *e, void *table);
 
 /*----------------------------------------------------------------------
 FUNCTIONS!!!! cOMMENT THIS LATER
@@ -277,6 +278,83 @@ generate_params_symbols(Header *h, scope *sc, sym_table *prog) {
         //Contine along
         params = params->rest;
     }   
+}
+
+void* generate_loop_table(While *loop){
+    //We need to go through and find all symbols in the expressoin and loop
+    void *table = bbst_intialize();
+    //Go through condition
+    find_and_insert_expr_symbols(loop->cond,table);
+    //Then the statements
+    find_and_insert_statement_symbols(loop->body, table);
+
+    return table;
+}
+
+void* generate_if_table(Cond *ifcond){
+    //We need to go through and find 
+    void *table = bbst_intialize();
+    //Go through the if condition
+    find_and_insert_expr_symbols(ifcond->cond,table);
+    //Then the statements
+    find_and_insert_statement_symbols(ifcond->then_branch, table);
+    find_and_insert_statement_symbols(ifcond->else_branch, table);
+
+    return table;
+}
+
+void find_and_insert_expr_symbols(Expr *e, void *table){
+
+}
+
+
+void find_and_insert_statement_symbols(Expr *e, void *table){
+    while(statements!=NULL){
+        Stmt *statement = statements->first;
+        StmtKind kind = statement->kind;
+        SInfo *info = &(statement->info);
+
+         // Switch on kind of statement and print appropriately
+        switch(kind) {
+            case STMT_ASSIGN: 
+                find_and_insert_expr_symbols(&info->assign->asg_ident, table);
+                find_and_insert_expr_symbols(&info->assign->asg_expr, table);
+                break;
+
+            case STMT_COND:
+                analyse_if(&info->cond, table, scope_id, line_no);
+                break;
+
+            case STMT_READ:
+                analyse_read(info->read, table, scope_id, line_no);
+                break;
+
+            case STMT_WHILE:
+                analyse_while(&info->loop, table, scope_id, line_no);
+                break;
+
+            case STMT_WRITE: 
+                analyse_write(info->write,table, scope_id, line_no);
+                break;
+
+            case STMT_FUNC:
+                analyse_function(info->func, table, scope_id, line_no);
+                break;
+        }
+        statements = statements->rest;  
+    }
+}
+
+
+
+symbol* retrieve_symbol_in_expr_table(void *expr_table, char *id){
+     //First check if the scope exists, otherwise insert.
+    if(expr_table != NULL){
+        symbol *sym = (symbol *) bbst_find_node(id, expr_table, comp_symbol);
+        return sym;     
+    } else {    
+        return NULL;
+    }
 }
 
 

@@ -88,7 +88,7 @@ void print_dupe_symbol_errors(char *id, Type t1, Type t2,
 	int duplicate, int original){
 	fprintf(stderr, BOLDWHITE "%d " BOLDRED "error: " BOLDWHITE 
 		"symbol " KYEL "%s" KNRM " has been redefined, originally "
-		"defined here:\n", duplicate, id);
+		"defined on line %d as:\n", duplicate, id, original);
 	print_indents(stderr, 3);
 	fprintf(stderr,"%s %s;\n", id, typenames[t1]);
 	fprintf(stderr, BOLDWHITE "redefined as:\n" KNRM);
