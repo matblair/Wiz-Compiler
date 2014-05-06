@@ -330,6 +330,7 @@ map_print_symbol(const void *node) {
 char *
 print_symbol(const void *node) {
     symbol *s = (symbol *) node;
+    fprintf(stderr, "%s (%d)", get_symbol_id(s), s->slot);
     return get_symbol_id(s);
 }
 

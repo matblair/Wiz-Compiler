@@ -28,6 +28,7 @@ void gen_oz_prologue(OzProgram *p, Params *params, Decls *decls, void *table);
 void gen_oz_epilogue(OzProgram *p, void *table);
 void gen_oz_params(OzProgram *p, Params *params, void *table);
 void gen_oz_decls(OzProgram *p, Decls *decls, void *table);
+void gen_oz_init_array(OzProgram *p, int slot, int reg, Bounds *bounds);
 
 void gen_oz_stmts(OzProgram *p, Stmts *stmts, void *tables, void *table);
 void gen_oz_write(OzProgram *p, Expr *write, void *table);
@@ -155,7 +156,7 @@ gen_oz_decls(OzProgram *p, Decls *decls, void *table) {
     while (ds != NULL) {
         decl = ds->first;
           
-        sym = retrieve_symbol_in_scope(decl->id,(scope *)table);
+        sym = retrieve_symbol_in_scope(decl->id, (scope *)table);
         
         if (!reals && sym->type == SYM_REAL) {
             reals = TRUE;
@@ -183,7 +184,7 @@ gen_oz_decls(OzProgram *p, Decls *decls, void *table) {
     ds = decls;
     while (ds != NULL) {
         decl = ds->first;
-        sym = retrieve_symbol_in_scope(decl->id,(scope *) table);
+        sym = retrieve_symbol_in_scope(decl->id, (scope *)table);
 
         if (sym->type == SYM_REAL) {
             reg = real_reg;
@@ -195,13 +196,31 @@ gen_oz_decls(OzProgram *p, Decls *decls, void *table) {
         if (sym->bounds == NULL) {
              gen_binop(p, OP_STORE, sym->slot, reg);
         } else {
-            int offset = sym->bounds->first->offset_size;
-            for (int i = 0; i < offset; i++) {
-                 gen_binop(p, OP_STORE, sym->slot + i, reg);
-            }
+            gen_oz_init_array(p, sym->slot, reg, sym->bounds);
         }
 
         ds = ds->rest;
+    }
+}
+
+void
+gen_oz_init_array(OzProgram *p, int slot, int reg, Bounds *bounds) {
+    int size = bounds->first->upper - bounds->first->lower + 1;
+
+    // deepest down, initialse all the frames
+    if (bounds->rest == NULL) {
+        for (int i = 0; i < size; i++) {
+            gen_binop(p, OP_STORE, slot + i, reg);
+        }
+    }
+    // recursively initialise all the subarrays
+    else {
+        int offset = bounds->first->offset_size;
+        int next_slot;
+        for (int i = 0; i < size; i++) {
+            next_slot = slot + i * offset;
+            gen_oz_init_array(p, next_slot, reg, bounds->rest);
+        }
     }
 }
 
