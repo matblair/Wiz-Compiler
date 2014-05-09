@@ -6,6 +6,7 @@
  *---------------------------------------------------------------------------*/
 
 #include <stdio.h>
+#include <string.h>
 #include "ast.h"
 #include "symbol.h"
 #include "oztree.h"
@@ -17,7 +18,16 @@
 
 const char *sectionnames[] = { COMMENTSTRS };
 const char *builtinnames[] = { BUILTINNAMES };
-int next_label = 0;
+
+#define BOUNDS_ERROR "[FATAL]: array element out of bounds!\\n"
+#define DIV_ERROR "[FATAL]: division by zero!\\n"
+
+typedef enum {
+    OUT_OF_BOUNDS_LABEL, DIV_BY_ZERO_LABEL, FIRST_AVAILABLE_LABEL
+} ReservedLabel;
+
+int next_label = FIRST_AVAILABLE_LABEL;
+
 
 /*-----------------------------------------------------------------------------
  * Function prototypes for internal functions
@@ -29,6 +39,8 @@ void gen_oz_epilogue(OzProgram *p, void *table);
 void gen_oz_params(OzProgram *p, Params *params, void *table);
 void gen_oz_decls(OzProgram *p, Decls *decls, void *table);
 void gen_oz_init_array(OzProgram *p, int slot, int reg, Bounds *bounds);
+void gen_oz_out_of_bounds(OzProgram *p);
+void gen_oz_div_by_zero(OzProgram *p);
 
 void gen_oz_stmts(OzProgram *p, Stmts *stmts, void *tables, void *table);
 void gen_oz_write(OzProgram *p, Expr *write, void *table);
@@ -38,10 +50,11 @@ void gen_oz_call(OzProgram *p, Function *call, void *tables, void *table);
 void gen_oz_cond(OzProgram *p, Cond *cond, void *tables, void *table);
 void gen_oz_while(OzProgram *p, While *loop, void *tables, void *table);
 
-
 void gen_oz_expr(OzProgram *p, int reg, Expr *expr, void *table);
 void gen_oz_expr_id(OzProgram *p, int reg, char *id, void *table);
 void gen_oz_expr_const(OzProgram *p, int reg, Constant *constant);
+void gen_oz_expr_array_val(OzProgram *p, int reg, Expr *a, void *table);
+void gen_oz_expr_array_addr(OzProgram *p, int reg, Expr *a, void *table);
 void gen_oz_expr_binop(OzProgram *p, int reg, Expr *expr, void *table);
 void gen_oz_expr_binop_bool(OzProgram *p, int r1, int r2, int r3, Expr *expr);
 void gen_oz_expr_binop_int(OzProgram *p, int r1, int r2, int r3, Expr *expr);
@@ -56,8 +69,6 @@ void gen_call(OzProgram *p, char *id);
 void gen_call_builtin(OzProgram *p, OzBuiltinId id);
 void gen_halt(OzProgram *p);
 void gen_return(OzProgram *p);
-void gen_oz_expr_array_val(OzProgram *p, int reg, Expr *a, void *table);
-void gen_oz_expr_array_addr(OzProgram *p, int reg, Expr *a, void *table);
 void gen_proc_label(OzProgram *p, char *id);
 void gen_label(OzProgram *p, int id);
 void gen_int_const(OzProgram *p, int reg, int val);
@@ -80,6 +91,8 @@ gen_oz_program(Program *p, void *tables) {
 
     gen_call(ozprog, PROGENTRY);
     gen_halt(ozprog);
+    gen_oz_out_of_bounds(ozprog);
+    gen_oz_div_by_zero(ozprog);
 
     gen_oz_procs(ozprog, p->procedures, tables);
 
@@ -88,7 +101,7 @@ gen_oz_program(Program *p, void *tables) {
 
 
 /*-----------------------------------------------------------------------------
- * Convert Wiz structures into Oz structures
+ * Convert high level Wiz stuff into Oz structures
  *---------------------------------------------------------------------------*/
 
 void
@@ -223,6 +236,36 @@ gen_oz_init_array(OzProgram *p, int slot, int reg, Bounds *bounds) {
         }
     }
 }
+
+// Label to halt the program because someone attempted to access elements
+// outside the bounds of an array!
+void gen_oz_out_of_bounds(OzProgram *p) {
+    int size = strlen(BOUNDS_ERROR) + 1;
+    char *msg = checked_malloc(sizeof(char) * size);
+    strcpy(msg, BOUNDS_ERROR);
+
+    gen_label(p, OUT_OF_BOUNDS_LABEL);
+    gen_string_const(p, 0, msg);
+    gen_call_builtin(p, BUILTIN_PRINT_STRING);
+    gen_halt(p);
+}
+
+// Label to halt the program because someone attempted to divide by zero
+void gen_oz_div_by_zero(OzProgram *p) {
+    int size = strlen(DIV_ERROR) + 1;
+    char *msg = checked_malloc(sizeof(char) * size);
+    strcpy(msg, DIV_ERROR);
+
+    gen_label(p, DIV_BY_ZERO_LABEL);
+    gen_string_const(p, 0, msg);
+    gen_call_builtin(p, BUILTIN_PRINT_STRING);
+    gen_halt(p);
+}
+
+
+/*-----------------------------------------------------------------------------
+ * Convert Wiz statements into Oz
+ *---------------------------------------------------------------------------*/
 
 void
 gen_oz_stmts(OzProgram *p, Stmts *stmts, void *tables, void *table) {
@@ -447,6 +490,11 @@ gen_oz_while(OzProgram *p, While *loop, void *tables, void *table) {
     gen_label(p, after_label);                  // exit jump point
 }
 
+
+/*-----------------------------------------------------------------------------
+ * Convert Wiz expressions into Oz structures
+ *---------------------------------------------------------------------------*/
+
 void
 gen_oz_expr(OzProgram *p, int reg, Expr *expr, void *table) {
     switch(expr->kind) {
@@ -528,10 +576,11 @@ gen_oz_expr_array_addr(OzProgram *p, int reg, Expr *a, void *table) {
     Bound *bound;
     Exprs *indices = a->indices;
     Expr *index;
+    int frames;
 
-    gen_binop(p, OP_LOAD_ADDRESS, reg, sym->slot);
+    gen_int_const(p, reg, 0); // default to zero offset
 
-    // get to the correct address!
+    // calculate the offset we want to apply
     while(bounds != NULL) {
         bound = bounds->first;
         index = indices->first;
@@ -541,12 +590,33 @@ gen_oz_expr_array_addr(OzProgram *p, int reg, Expr *a, void *table) {
         gen_triop(p, OP_SUB_INT, reg + 1, reg + 1, reg + 2);
         gen_int_const(p, reg + 2, bound->offset_size); // size of each offset
         gen_triop(p, OP_MUL_INT, reg + 1, reg + 1, reg + 2);
-        gen_triop(p, OP_SUB_OFFSET, reg, reg, reg + 1); // apply the offset
+        gen_triop(p, OP_ADD_INT, reg, reg, reg + 1); // increase the offset
 
         bounds = bounds->rest;
         indices = indices->rest;
     }
+
+    // quit if the array element we're accessing is out of bounds
+    // offset < 0
+    gen_int_const(p, reg + 1, 0);
+    gen_triop(p, OP_CMP_LT_INT, reg + 1, reg, reg + 1);
+    gen_binop(p, OP_BRANCH_ON_TRUE, reg + 1, OUT_OF_BOUNDS_LABEL);
+    // offset > max
+    bound = sym->bounds->first;
+    frames = bound->offset_size * (bound->upper - bound->lower + 1);
+    gen_int_const(p, reg + 1, frames);
+    gen_triop(p, OP_CMP_GE_INT, reg + 1, reg, reg + 1);
+    gen_binop(p, OP_BRANCH_ON_TRUE, reg + 1, OUT_OF_BOUNDS_LABEL);
+
+    // access the array element
+    gen_binop(p, OP_LOAD_ADDRESS, reg + 1, sym->slot);
+    gen_triop(p, OP_SUB_OFFSET, reg, reg + 1, reg);
 }
+
+
+/*-----------------------------------------------------------------------------
+ * Convert Wiz binary/unary operations into Oz structures
+ *---------------------------------------------------------------------------*/
 
 void
 gen_oz_expr_binop(OzProgram *p, int reg, Expr *expr, void *table) {
@@ -556,6 +626,18 @@ gen_oz_expr_binop(OzProgram *p, int reg, Expr *expr, void *table) {
     // Eval sub expressions
     gen_oz_expr(p, reg, expr->e1, table);
     gen_oz_expr(p, reg + 1, expr->e2, table);
+
+    // check for div by 0
+    if (expr->binop == BINOP_DIV) {
+        if (e2type == FLOAT_TYPE) {
+            gen_real_const(p, reg + 2, 0.0f);
+            gen_triop(p, OP_CMP_EQ_REAL, reg + 2, reg + 2, reg + 1);
+        } else {
+            gen_int_const(p, reg + 2, 0);
+            gen_triop(p, OP_CMP_EQ_INT, reg + 2, reg + 2, reg + 1);
+        }
+        gen_binop(p, OP_BRANCH_ON_TRUE, reg + 2, DIV_BY_ZERO_LABEL);
+    }
 
     // deal with operations with both int and float
     if (e1type == INT_TYPE && e2type == FLOAT_TYPE) {
