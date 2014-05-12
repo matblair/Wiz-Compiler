@@ -164,8 +164,9 @@ void bbst_dump_it(void *t, int offset, char* (*p_node)(const void *node))
     if(tree->right != NULL){
         bbst_dump_it(tree->right,offset+EXTRA, p_node);
     } 
-    char *s = p_node(tree->current);
-    fprintf(stderr, "%*s%s\n",offset,"",s);
+    fprintf(stderr, "%*s",offset,"");
+    (*p_node)(tree->current);
+    fprintf(stderr, "\n");
 
     if(tree->left != NULL){
         bbst_dump_it(tree->left,offset+EXTRA, p_node);

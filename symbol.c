@@ -221,7 +221,7 @@ add_bounds_to_symbol(symbol *sym, Intervals *intvls) {
 
     if (sym->bounds != NULL) {
         bound = sym->bounds->first;
-        offset = (bound->upper) - (bound->lower);
+        offset = (bound->upper) - (bound->lower) + 1;
         offset *= bound->offset_size;
     } else {
         offset = 1;
@@ -408,6 +408,7 @@ map_print_symbol(const void *node) {
 char *
 print_symbol(const void *node) {
     symbol *s = (symbol *) node;
+    fprintf(stderr, "%s (%d)", get_symbol_id(s), s->slot);
     return get_symbol_id(s);
 }
 
