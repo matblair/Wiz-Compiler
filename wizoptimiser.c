@@ -326,7 +326,6 @@ Expr* reduce_commutative_multiop(Expr* e){
     //now scan through the list, folding constant terms onto the RHS
     //expression, and appending others to the left
     //set up expressions needed for scanning
-    Expr* reduced_expr;
     Exprs* pos_list = NULL;
     Exprs* pos_list_start = NULL;
     Exprs* neg_list = NULL;
@@ -449,12 +448,13 @@ Expr* reduce_commutative_multiop(Expr* e){
     Expr* neg_expr = fold_expression_list(neg_list_start, neglist_binop);
 
     //form reduced_expr from pos_expr and neg_expr
-    if (pos_expr == NULL){
+    Expr* reduced_expr = NULL;
+    if (pos_expr == NULL && neg_expr != NULL){
         //make sure to enclose the neg_expr in negative node
         reduced_expr = generate_unop_node(neg_op, neg_expr, e->lineno);
-    } else if (neg_expr == NULL){
+    } else if (neg_expr == NULL && pos_expr != NULL){
         reduced_expr = pos_expr;
-    } else{
+    } else if (pos_expr != NULL && neg_expr != NULL){
         //in this case have to decide how to combine them
         //by default, the combining operation is std_op
         if (std_op == BINOP_ADD){
