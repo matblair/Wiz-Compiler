@@ -11,6 +11,8 @@
 #include "bbst.h"
 #include "helper.h"
 
+#include "pretty.h"
+
 /*----------------------------------------------------------------------
     Internal structures.  
 -----------------------------------------------------------------------*/
@@ -23,7 +25,13 @@ Expr* reduce_expression(Expr *e);
 void reduce_assigment(Assign *a);
 void reduce_if(Cond *c);
 Expr* reduce_binop(Expr *e);
-Expr* reduce_unop(Expr *e);
+Expr* reduce_commutative_multiop(Expr *e);
+Expr* generate_binop_node(BinOp op, Expr* e1, Expr* e2, int lineno);
+BOOL is_identity(Expr* e, BinOp op);
+Expr* fold_expression_list(Exprs* elist, BinOp op);
+Exprs* linearize_expression(Expr* e, BinOp std_op, BinOp inv_op, int num_inv);
+Expr* reduce_unop(Expr *e, BOOL recursive);
+Expr* generate_unop_node(UnOp op, Expr* e1, int lineno);
 
 /*----------------------------------------------------------------------
 FUNCTIONS!!!! cOMMENT THIS LATER
@@ -61,16 +69,16 @@ void reduce_statements(Stmts *statements){
                 break;
 
             case STMT_READ:
-                (info->read = reduce_expression(info->read));
+                info->read = reduce_expression(info->read);
                 break;
 
             case STMT_WHILE:
-                (info->loop.cond = reduce_expression(info->loop.cond));
+                info->loop.cond = reduce_expression(info->loop.cond);
                 reduce_statements(info->loop.body);
                 break;
 
             case STMT_WRITE: 
-                (info->write = reduce_expression(info->write));
+                info->write = reduce_expression(info->write);
                 break;
 
             case STMT_FUNC:
@@ -114,10 +122,12 @@ Expr* reduce_expression(Expr *e){
             return reduce_binop(e);
             break;
         case EXPR_UNOP:
-            return reduce_unop(e);
+            //for general expression reduction, want the unop reduction
+            //to be fully recursive
+            return reduce_unop(e, TRUE);
             break;
         case EXPR_ARRAY:
-            //We need some expression here not assigmnet (stupid c);
+            //We need some expression here not assignment (stupid c);
             if(e){
                 Exprs *es = e->indices;
                 while(es != NULL){
@@ -133,18 +143,12 @@ Expr* reduce_expression(Expr *e){
 }
 
 Expr* reduce_binop(Expr *e){
-    //Reduce two sub expressions
-    e->e1 = reduce_expression(e->e1);
-    e->e2 = reduce_expression(e->e2);           
     //Get the type of the binary operation
     BinOp b = e->binop;
-    //Get their kinds
-    ExprKind e1k = e->e1->kind;
-    ExprKind e2k = e->e2->kind;
-    int both_const = (e1k == EXPR_CONST && e2k == EXPR_CONST);
-    Expr* new_expr;
 
-    //cover non-boolean cases first
+    printf("reducing binop of type %d:\n", b);
+
+    //cover commutative cases first
     switch(b){
         case BINOP_OR:
         case BINOP_AND:
@@ -155,104 +159,141 @@ Expr* reduce_binop(Expr *e){
             // constant folding is possible (or in case of sub, can view as
             // commutative since x - y  =  x + (-y)
             return reduce_commutative_multiop(e);
+            printf("commutative reduce done\n");
             break;
-        case BINOP_DIV:
-            //in this case just reduce if sub-expressions are constant
-            if (both_const && e1t == INT_TYPE && e1t == INT_TYPE){
-                new_expr = check_malloc(sizeof(Expr));
-                new_expr->constant.type = INT_TYPE;
-                new_expr->constant.val.int_val = e->e1->constant.val.int_val
-                    / e->e2->constant.val.int_val;
-                new_expr->kind = EXPR_CONST;
-                new_expr->lineno = e->lineno;
-                //free unused expressions and return
-                free(e->e1);
-                free(e->e2);
-                free(e);
-                return new_expr;
-            }
-            else{
-                return e;
-            }
+        default:
+            //do nothing for now in default case
+            break;
     }
 
-    //now cover boolean cases, only if both sub expressions are constant
-    //and of same type
-    if (both_const && e1t == e2t){
-        int result;
-        switch(b){
-            //for EQ and NTEQ could have int or bool arguments
-            case BINOP_EQ:
-                if (e1t == BOOL_TYPE) {
-                    result = (e->e1->constant.val.bool_val
-                            == e->e2->constant.val.bool_val);
-                } else if (e1t == INT_TYPE){
-                    result = (e->e1->constant.val.int_val
-                            == e->e2->constant.val.int_val);
-                } else{
-                    //do nothing in error case
-                    return e;
-                }
-                break;
-            case BINOP_NTEQ:
-                if (e1t == BOOL_TYPE) {
-                    result = (e->e1->constant.val.bool_val
-                            != e->e2->constant.val.bool_val);
-                } else if (e1t == INT_TYPE){
-                    result = (e->e1->constant.val.int_val
-                            != e->e2->constant.val.int_val);
-                } else{
-                    //do nothing in error case
-                    return e;
-                }
-                break;
-            case BINOP_LT:
-                if (e1t == INT_TYPE){
-                    result = (e->e1->constant.val.int_val
-                            < e->e2->constant.val.int_val);
-                } else{
-                    //do nothing in error case
-                    return e;
-                }
-                break;
-            case BINOP_GT:
-                if (e1t == INT_TYPE){
-                    result = (e->e1->constant.val.int_val
-                            < e->e2->constant.val.int_val);
-                } else{
-                    //do nothing in error case
-                    return e;
-                }
-                break;
-            case BINOP_LTEQ:
-                if (e1t == INT_TYPE){
-                    result = (e->e1->constant.val.int_val
-                            < e->e2->constant.val.int_val);
-                } else{
-                    //do nothing in error case
-                    return e;
-                }
-                break;
-            case BINOP_GTEQ:
-                if (e1t == INT_TYPE){
-                    result = (e->e1->constant.val.int_val
-                            < e->e2->constant.val.int_val);
-                } else{
-                    //do nothing in error case
-                    return e;
-                }
-                break;
-            default:
+    //now reduce sub expressions recursively for non-commutative cases,
+    //and check if they are both constants
+    e->e1 = reduce_expression(e->e1);
+    e->e2 = reduce_expression(e->e2);           
+    //Get their kinds
+    ExprKind e1k = e->e1->kind;
+    ExprKind e2k = e->e2->kind;
+    BOOL both_const = (e1k == EXPR_CONST && e2k == EXPR_CONST);
+    //only continue if both sub-expressions are constant and of same type
+    if (!(both_const && e->e1->constant.type == e->e2->constant.type)){
+        return e;
+    }
+    Type t = e->e1->constant.type;
+    Expr* new_expr;
+    Constant new_constant;
+
+    //switch again for the other cases
+    switch(b){
+        case BINOP_DIV:
+            //in this case just reduce if sub-expressions are constant
+            if (t == INT_TYPE){
+                new_constant.type = INT_TYPE;
+                new_constant.val.int_val = e->e1->constant.val.int_val
+                    / e->e2->constant.val.int_val;
+            }
+            else{
+                //for non-int don't want to reduce
+                return e;
+            }
+            break;
+        case BINOP_EQ:
+            if (t == BOOL_TYPE) {
+                new_constant.type = BOOL_TYPE;
+                new_constant.val.bool_val = (e->e1->constant.val.bool_val
+                        == e->e2->constant.val.bool_val);
+            } else if (t == INT_TYPE){
+                new_constant.type = BOOL_TYPE;
+                new_constant.val.bool_val = (e->e1->constant.val.int_val
+                        == e->e2->constant.val.int_val);
+            } else{
                 //do nothing in error case
                 return e;
-        }
-        //now construct new node to hold boolean result
-        new_expr = checked_malloc(sizeof(Expr));
-        new_expr->constant.type = BOOL_TYPE;
-        new_expr->constant.val.bool_val = result;
-        new_expr->kind = EXPR_CONST;
-        new_expr->lineno = e->lineno;
+            }
+            break;
+        case BINOP_NTEQ:
+            if (t == BOOL_TYPE) {
+                new_constant.type = BOOL_TYPE;
+                new_constant.val.bool_val = (e->e1->constant.val.bool_val
+                        != e->e2->constant.val.bool_val);
+            } else if (t == INT_TYPE){
+                new_constant.type = BOOL_TYPE;
+                new_constant.val.bool_val = (e->e1->constant.val.int_val
+                        != e->e2->constant.val.int_val);
+            } else{
+                //do nothing in error case
+                return e;
+            }
+            break;
+        case BINOP_LT:
+            if (t == INT_TYPE){
+                new_constant.type = BOOL_TYPE;
+                new_constant.val.bool_val = (e->e1->constant.val.int_val
+                        < e->e2->constant.val.int_val);
+            } else if (t == FLOAT_TYPE){
+                //this is a safe reduction for floats (unambiguous result)
+                new_constant.type = BOOL_TYPE;
+                new_constant.val.bool_val = (e->e1->constant.val.float_val
+                        < e->e2->constant.val.float_val);
+            } else{
+                //do nothing in error case
+                return e;
+            }
+            break;
+        case BINOP_GT:
+            if (t == INT_TYPE){
+                new_constant.type = BOOL_TYPE;
+                new_constant.val.bool_val = (e->e1->constant.val.int_val
+                        < e->e2->constant.val.int_val);
+            } else if (t == FLOAT_TYPE){
+                //this is a safe reduction for floats (unambiguous result)
+                new_constant.type = BOOL_TYPE;
+                new_constant.val.bool_val = (e->e1->constant.val.float_val
+                        < e->e2->constant.val.float_val);
+            } else{
+                //do nothing in error case
+                return e;
+            }
+            break;
+        case BINOP_LTEQ:
+            if (t == INT_TYPE){
+                new_constant.type = BOOL_TYPE;
+                new_constant.val.bool_val = (e->e1->constant.val.int_val
+                        < e->e2->constant.val.int_val);
+            } else if (t == FLOAT_TYPE){
+                //this is a safe reduction for floats (unambiguous result)
+                new_constant.type = BOOL_TYPE;
+                new_constant.val.bool_val = (e->e1->constant.val.float_val
+                        < e->e2->constant.val.float_val);
+            } else{
+                //do nothing in error case
+                return e;
+            }
+            break;
+        case BINOP_GTEQ:
+            if (t == INT_TYPE){
+                new_constant.type = BOOL_TYPE;
+                new_constant.val.bool_val = (e->e1->constant.val.int_val
+                        < e->e2->constant.val.int_val);
+            } else if (t == FLOAT_TYPE){
+                //this is a safe reduction for floats (unambiguous result)
+                new_constant.type = BOOL_TYPE;
+                new_constant.val.bool_val = (e->e1->constant.val.float_val
+                        < e->e2->constant.val.float_val);
+            } else{
+                //do nothing in error case
+                return e;
+            }
+            break;
+        default:
+            //do nothing in error case
+            return e;
     }
+    //now construct new node to hold constant result
+    new_expr = checked_malloc(sizeof(Expr));
+    new_expr->constant = new_constant;
+    new_expr->kind = EXPR_CONST;
+    new_expr->lineno = e->lineno;
+
     //free the sub-expressions and previous expression, and return new
     free(e->e1);
     free(e->e2);
@@ -265,14 +306,14 @@ Expr* reduce_binop(Expr *e){
     reduces a multi-op expression involving some commutative operator
     (in case of - expressions view these as +)
 -----------------------------------------------------------------------*/
-Expr* reduce_commutative_multiop(e){
+Expr* reduce_commutative_multiop(Expr* e){
     BinOp b = e->binop;
     BinOp std_op, inv_op;
     Exprs* term_list;
     //determine standard and inverse operations for analysis
     if (b == BINOP_ADD || b == BINOP_SUB){
         std_op = BINOP_ADD;
-        inv_op = BIONP_SUB;
+        inv_op = BINOP_SUB;
     }
     else{
         std_op = b;
@@ -281,20 +322,21 @@ Expr* reduce_commutative_multiop(e){
     //linearize expression, converting to list of terms at same precedence
     //level
     term_list = linearize_expression(e, std_op, inv_op, 0);
+    printf("linearization done\n");
 
     //now scan through the list, folding constant terms onto the RHS
     //expression, and appending others to the left
     //set up expressions needed for scanning
     Expr* reduced_expr;
     Exprs* pos_list = NULL;
-    Exprs* pos_list_start;
+    Exprs* pos_list_start = NULL;
     Exprs* neg_list = NULL;
-    Exprs* neg_list_start;
+    Exprs* neg_list_start = NULL;
     UnOp neg_op;
     Expr* const_node = checked_malloc(sizeof(Expr));
 
     const_node->kind = EXPR_CONST;
-    const_node->lineno = e->lineo;
+    const_node->lineno = e->lineno;
     //obtain identity constant node, and the negative operator
     if (std_op == BINOP_ADD){
         const_node->constant.type = INT_TYPE;
@@ -323,23 +365,24 @@ Expr* reduce_commutative_multiop(e){
         Exprs* old;
         //only fold expression if it is constant, and of correct type
         if(next_e->kind == EXPR_CONST && next_e->constant.type
-                == constant_node->constant.type){
+                == const_node->constant.type){
             //this is a constant expr that we can fold
+            Constant c = next_e->constant;
             if (std_op == BINOP_ADD){
-                int next = constant.val.int_val;
+                int next = c.val.int_val;
                 const_node->constant.val.int_val += next;
             } else if (std_op == BINOP_MUL){
-                int next = constant.val.int_val;
+                int next = c.val.int_val;
                 const_node->constant.val.int_val *= next;
             } else if (std_op == BINOP_OR){
-                bool prev, next;
+                BOOL prev, next;
                 prev = const_node->constant.val.bool_val;
-                next = next_e->constant.val.bool_val;
+                next = c.val.bool_val;
                 const_node->constant.val.bool_val = prev || next;
             } else{
-                bool prev, next;
+                BOOL prev, next;
                 prev = const_node->constant.val.bool_val;
-                next = next_e->constant.val.bool_val;
+                next = c.val.bool_val;
                 const_node->constant.val.bool_val = prev && next;
             }
             //advance term_list
@@ -351,82 +394,80 @@ Expr* reduce_commutative_multiop(e){
             //otherwise we can't reduce this expression, so append it to
             //either positive or negative list 
             //check if it is a negative operand first
-            if (next_e->kind == EXPR_UNOP && next_e->unop == neg_op){
-                //append list node to the negative list
-                if (neg_list == NULL){
-                    //if this is first node in neg list set neg_list_start
-                    neg_list = term_list;
-                    neg_list_start = term_list;
-                } else{
-                    neg_list->rest = term_list;
-                    neg_list = neg_list->rest;
+                if (next_e->kind == EXPR_UNOP && next_e->unop == neg_op){
+                    //append list node to the negative list
+                    if (neg_list == NULL){
+                        //if this is first node in neg list set neg_list_start
+                        neg_list = term_list;
+                        neg_list_start = term_list;
+                    } else{
+                        neg_list->rest = term_list;
+                        neg_list = neg_list->rest;
+                    }
+                    //advance term_list, and cut off pointer from end of neg_list
+                    term_list = term_list->rest;
+                    neg_list->rest = NULL;
+                    //prune the negative unary node from the neg_list entry
+                    neg_list->first = next_e->e1;
+                    free(next_e);
                 }
-                //advance term_list, and cut off pointer from end of neg_list
-                term_list = term_list->rest;
-                neg_list->rest = NULL;
-                //prune the negative unary node from the neg_list entry
-                neg_list->first = next_e->e1;
-                free(next_e);
-            }
-            else{
-                //otherwise append list node to the positive list
-                if (pos_list == NULL){
-                    //if this is first node in pos list set pos_list_start
-                    pos_list = term_list;
-                    pos_list_start = term_list;
-                } else{
-                    pos_list->rest = term_list;
-                    pos_list = pos_list->rest;
+                else{
+                    //otherwise append list node to the positive list
+                    if (pos_list == NULL){
+                        //if this is first node in pos list set pos_list_start
+                        pos_list = term_list;
+                        pos_list_start = term_list;
+                    } else{
+                        pos_list->rest = term_list;
+                        pos_list = pos_list->rest;
+                    }
+                    //advance term_list, and cut off pointer from end of pos_list
+                    term_list = term_list->rest;
+                    pos_list->rest = NULL;
                 }
-                //advance term_list, and cut off pointer from end of pos_list
-                term_list = term_list->rest;
-                pos_list->rest = NULL;
             }
         }
-    }
 
-    //now iterate through positive and negative lists recursively to create
-    //positive and negative expressions, then join these along with the
-    //constant expression
+        //now iterate through positive and negative lists recursively to create
+        //positive and negative expressions, then join these along with the
+        //constant expression
 
-    //work out which binary operator we want to use in negative list
-    //(for ADD and MUL this is regular binop, for AND/OR have to swap,
-    //according to De Morgan's Law)
-    BinOp neglist_binop;
-    BinOp combine_binop
-    if (std_op == BINOP_ADD){
-        neglist_binop = BINOP_ADD;
-    } else if (std_op == BINOP_MUL){
-        neglist_binop = BINOP_MUL;
-    } else if (std_op == BINOP_AND){
+        //work out which binary operator we want to use in negative list
+        //(for ADD and MUL this is regular binop, for AND/OR have to swap,
+        //according to De Morgan's Law)
+        BinOp neglist_binop;
+        BinOp combine_binop;
+        if (std_op == BINOP_ADD){
+            neglist_binop = BINOP_ADD;
+        } else if (std_op == BINOP_MUL){
+            neglist_binop = BINOP_MUL;
+        } else if (std_op == BINOP_AND){
         neglist_binop = BINOP_OR;
     } else{
         neglist_binop = BINOP_AND;
     }
-    Expr* pos_expr = fold_expression_list(start_pos_list, std_op);
-    Expr* neg_expr = fold_expression_list(start_neg_list, neglist_binop);
+    Expr* pos_expr = fold_expression_list(pos_list_start, std_op);
+    Expr* neg_expr = fold_expression_list(neg_list_start, neglist_binop);
 
     //form reduced_expr from pos_expr and neg_expr
     if (pos_expr == NULL){
-        reduced_expr = neg_expr;
+        //make sure to enclose the neg_expr in negative node
+        reduced_expr = generate_unop_node(neg_op, neg_expr, e->lineno);
     } else if (neg_expr == NULL){
         reduced_expr = pos_expr;
     } else{
         //in this case have to decide how to combine them
         //by default, the combining operation is std_op
-        BinOp combine_op = std_op;
         if (std_op == BINOP_ADD){
             //for add, just turn node into a SUB node
-            combine_op = BINOP_SUB;
-        } else if (std_op == BINOP_MUL){
-            //for mul, need to explicitely negative the negative terms
-            neg_expr = generate_unop_node(UNOP_MINUS, neg_expr, e->lineno);
+            combine_binop = BINOP_SUB;
         } else{
-            //for AND and OR, need to negate negative expression
-            neg_expr = generate_unop_node(UNOP_NOT, neg_expr, e->lineno);
+            //for others, need to explicitly negate the negative terms
+            combine_binop = std_op;
+            neg_expr = generate_unop_node(neg_op, neg_expr, e->lineno);
         }
         //now combine them
-        reduced_expr = generate_binop_node(combine_op, pos_expr,
+        reduced_expr = generate_binop_node(combine_binop, pos_expr,
                 neg_expr, e->lineno);
     }
 
@@ -439,8 +480,21 @@ Expr* reduce_commutative_multiop(e){
     else if (!is_identity(const_node, std_op)){
         //if not identity need to combine with our reduced expr from
         //positive and negative lists
-        reduced_expr = generate_binop_node(std_op,
-                reduced_expr, const_node, e->lineno);
+
+        //check for case where reduced_expr is negated and op is ADD (can
+        //optimize and change to SUB)
+        if (reduced_expr->kind == EXPR_UNOP
+                && reduced_expr->unop == UNOP_MINUS && std_op == BINOP_ADD){
+            Expr* tmp = reduced_expr;
+            reduced_expr = generate_binop_node(BINOP_SUB, const_node,
+                    reduced_expr->e1, e->lineno);
+            //free the now redundant unop node
+            free(tmp);
+        }
+        else{
+            reduced_expr = generate_binop_node(std_op,
+                    reduced_expr, const_node, e->lineno);
+        }
     }
 
     return reduced_expr;
@@ -530,7 +584,7 @@ Expr* fold_expression_list(Exprs* elist, BinOp op){
     also performs recursive reductions of the individual terms
 -----------------------------------------------------------------------*/
 Exprs* linearize_expression(Expr* e, BinOp std_op, BinOp inv_op, int num_inv){
-    Exprs* e_list;
+    Exprs* e_list = NULL;
     if (e->kind == EXPR_BINOP && e->binop == std_op) {
         //linearise LHS sub-expression
         e_list = linearize_expression(e->e1, std_op, inv_op, num_inv);
@@ -540,7 +594,7 @@ Exprs* linearize_expression(Expr* e, BinOp std_op, BinOp inv_op, int num_inv){
             tmp_list = tmp_list->rest;
         }
         //linearise RHS sub-expression and append
-        tmp_list->rest = linearize_expression(e->e2, std_op. inv_op, num_inv);
+        tmp_list->rest = linearize_expression(e->e2, std_op, inv_op, num_inv);
         //free memory that was used for holding this (now redundant) node
         free(e);
     }
@@ -552,15 +606,17 @@ Exprs* linearize_expression(Expr* e, BinOp std_op, BinOp inv_op, int num_inv){
         while (tmp_list->rest != NULL){
             tmp_list = tmp_list->rest;
         }
-        tmp_list->rest = linearize_expression(e->e2, std_op. inv_op, num_inv+1);
+        tmp_list->rest = linearize_expression(e->e2, std_op, inv_op, num_inv+1);
         free(e);
     }
     else {
         //in any other case the expression is a single term, so reduce
-        //recursively, then continue linearizing if possible (the reduction
+        //and continue linearizing if possible (the reduction
         //might create further scope), or terminate by returning a singleton
-        //list node
-        Expr* reduced_expr;
+        //list node and reducing recursively
+
+        //first, invert the expression if necessary
+        Expr* e1;
         //if odd number of inversions, invert the expression
         if (num_inv % 2 == 1){
             //invert expression (add unary minus node)
@@ -569,33 +625,42 @@ Exprs* linearize_expression(Expr* e, BinOp std_op, BinOp inv_op, int num_inv){
             inv_node->lineno = e->lineno;
             inv_node->unop = UNOP_MINUS;
             inv_node->e1 = e;
-            reduced_expr = reduce_expression(inv_node);
+            e1 = inv_node;
         }
         else{
-            reduced_expr = reduce_expression(e);
+            e1 = e;
         }
-        //if there is scope to continue linearising reduced expression,
-        //then call recursively to continue
-        if (reduced_expr->kind == EXPR_BINOP && (reduced_expr->binop == std_op
-                    || reduced_expr->binop == inv_op)){
-            e_list = linearize_expression(reduced_expr,
-                    std_op, inv_op, num_inv);
+        //if e1 is unary, there could be scope for further
+        //linearization, so try a non-recursive reduction
+        if (e1->kind == EXPR_UNOP){
+            e1 = reduce_unop(e1, FALSE);
+            //if there is scope to continue linearising reduced expression,
+            //then call recursively to continue
+            if (e1->kind == EXPR_BINOP && (e1->binop == std_op
+                        || e1->binop == inv_op)){
+                e_list = linearize_expression(e1, std_op, inv_op, num_inv);
+            }
         }
-        else{
+        if (e_list == NULL){
             //otherwise we are at base case of the recursive search, so
-            //create a list node, and populate
+            //create a list node, and populate, after performing
+            //a fully recursive reduction
             e_list = (Exprs*) checked_malloc(sizeof(Exprs));
-            e_list->first = reduced_expr;
+            e_list->first = reduce_expression(e1);
             e_list->rest = NULL;
+            printf("found atom: ");
+            print_expression(stdout, e_list->first, 0);
+            printf("\n");
         }
     }
     return e_list;
 }
 
 
-Expr* reduce_unop(Expr *e){
+Expr* reduce_unop(Expr *e, BOOL recursive){
     UnOp u = e->unop;
     Expr *e1 = e->e1;
+    Expr *e_shallow_reduced = NULL;
     switch(u){
         case UNOP_MINUS:
             //before we reduce sub-expression recursively, check for
@@ -606,21 +671,21 @@ Expr* reduce_unop(Expr *e){
                 free(e);
                 //place minus around left sub expression
                 e1->e1 = generate_unop_node(UNOP_MINUS, e1->e1, e1->lineno);
-                return reduce_expression(e1);
+                e_shallow_reduced = e1;
             } else if (e1->kind == EXPR_BINOP && e1->binop == BINOP_SUB){
                 //reduce -(a-b) to (-a)+b
                 e1->binop = BINOP_ADD;
                 free(e);
                 //place minus around left sub expression
                 e1->e1 = generate_unop_node(UNOP_MINUS, e1->e1, e1->lineno);
-                return reduce_expression(e1);
+                e_shallow_reduced = e1;
             } else if (e1->kind == EXPR_BINOP && e1->binop == BINOP_MUL){
                 //reduce -(a*b) to (-a)*(-b)
                 free(e);
                 //place minus around each sub expression
                 e1->e1 = generate_unop_node(UNOP_MINUS, e1->e1, e1->lineno);
                 e1->e2 = generate_unop_node(UNOP_MINUS, e1->e2, e1->lineno);
-                return reduce_expression(e1);
+                e_shallow_reduced = e1;
             }
             //do not do above for divide, as we do not try to re-arrange
             //integer division expressions
@@ -629,11 +694,30 @@ Expr* reduce_unop(Expr *e){
                 Expr* e1e1 = e1->e1;
                 free(e);
                 free(e1);
-                return reduce_expression(e1e1);
+                //greedily continue reducing extra unary nodes with same
+                //recursivity
+                if (e1e1->kind == EXPR_UNOP && e1e1->unop == UNOP_MINUS){
+                    return reduce_unop(e1e1, recursive);
+                }
+                else{
+                    e_shallow_reduced = e1e1;
+                }
+            }
+
+            //decide whether we reduce the shallow-reduced expression (if
+            //generated), based on whether unop reduction is recursive
+            if (e_shallow_reduced != NULL){
+                if (recursive){
+                    return reduce_expression(e_shallow_reduced);
+                } else{
+                    return e_shallow_reduced;
+                }
             }
 
             //if we fail to find reduction above, reduce sub-expression now
-            e1 = reduce_expression(e1);
+            if (recursive){
+                e1 = reduce_expression(e1);
+            } 
             //We have to change it into a negative value
             if(e1->kind == EXPR_CONST && !(e1->constant.type == BOOL_TYPE)){
                 Expr *new_expr = checked_malloc(sizeof(Expr));
@@ -661,51 +745,71 @@ Expr* reduce_unop(Expr *e){
             //expression that we can reduce logically
             if (e1->kind == EXPR_BINOP && e1->binop == BINOP_AND){
                 //reduces sub expression to an OR (De Morgan's Law)
-                e1->binop = BIONP_OR;
+                e1->binop = BINOP_OR;
                 free(e);
                 //place NOT around sub-expressions
                 e1->e1 = generate_unop_node(UNOP_NOT, e1->e1, e1->lineno);
                 e1->e2 = generate_unop_node(UNOP_NOT, e1->e2, e1->lineno);
-                return reduce_expression(e1);
-            } else if (e1->kind == EXPR_BINOP && e1->binop == EXPR_OR){
+                e_shallow_reduced = e1;
+            } else if (e1->kind == EXPR_BINOP && e1->binop == BINOP_OR){
                 //reduces sub expression to an AND (De Morgan's Law)
-                e1->binop = BIONP_AND;
+                e1->binop = BINOP_AND;
                 free(e);
                 //place NOT around sub-expressions
                 Expr* e1e1 = generate_unop_node(UNOP_NOT, e1->e1, e1->lineno);
                 e1->e1 = e1e1;
                 Expr* e1e2 = generate_unop_node(UNOP_NOT, e1->e2, e1->lineno);
                 e1->e2 = e1e2;
-                return reduce_expression(e1);
-            } else if (e1->kind == EXPR_BINOP && e1->binop == EXPR_GT){
+                e_shallow_reduced = e1;
+            } else if (e1->kind == EXPR_BINOP && e1->binop == BINOP_GT){
                 //reduces sub expression to a LTEQ
-                e1->binop = BIONP_LTEQ;
+                e1->binop = BINOP_LTEQ;
                 free(e);
-                return reduce_expression(e1);
-            } else if (e1->kind == EXPR_BINOP && e1->binop == EXPR_LT){
+                e_shallow_reduced = e1;
+            } else if (e1->kind == EXPR_BINOP && e1->binop == BINOP_LT){
                 //reduces sub expression to a GTEQ
-                e1->binop = BIONP_GTEQ;
+                e1->binop = BINOP_GTEQ;
                 free(e);
-                return reduce_expression(e1);
-            } else if (e1->kind == EXPR_BINOP && e1->binop == EXPR_GTEQ){
+                e_shallow_reduced = e1;
+            } else if (e1->kind == EXPR_BINOP && e1->binop == BINOP_GTEQ){
                 //reduces sub expression to a LT
-                e1->binop = BIONP_LT;
+                e1->binop = BINOP_LT;
                 free(e);
-                return reduce_expression(e1);
-            } else if (e1->kind == EXPR_BINOP && e1->binop == EXPR_LTEQ){
+                e_shallow_reduced = e1;
+            } else if (e1->kind == EXPR_BINOP && e1->binop == BINOP_LTEQ){
                 //reduces sub expression to a GT
-                e1->binop = BIONP_GT;
+                e1->binop = BINOP_GT;
                 free(e);
-                return reduce_expression(e1);
+                e_shallow_reduced = e1;
             } else if (e1->kind == EXPR_UNOP && e1->unop == UNOP_NOT){
-                //remove double negative
+                //remove double negative, and continue if any remain
                 Expr* e1e1 = e1->e1;
                 free(e);
                 free(e1);
-                return reduce_expression(e1e1);
+                //greedily continue reducing extra unary nodes with same
+                //recursivity
+                if (e1e1->kind == EXPR_UNOP && e1e1->unop == UNOP_NOT){
+                    return reduce_unop(e1e1, recursive);
+                }
+                else{
+                    e_shallow_reduced = e1e1;
+                }
             }
+
+            //decide whether we reduce the shallow-reduced expression (if
+            //generated), based on whether unop reduction is recursive
+            if (e_shallow_reduced != NULL){
+                if (recursive){
+                    return reduce_expression(e_shallow_reduced);
+                } else{
+                    return e_shallow_reduced;
+                }
+            }
+
             //otherwise reduce e1, and check if it is constant
-            Expr *e1 = reduce_expression(e->e1);
+            if (recursive){
+                e1 = reduce_expression(e1);
+            }
             if(e1->kind == EXPR_CONST && e1->constant.type == BOOL_TYPE){
                 Expr *new_expr = checked_malloc(sizeof(Expr));
                 new_expr->kind = EXPR_CONST;
