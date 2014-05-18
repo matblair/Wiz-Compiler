@@ -146,8 +146,6 @@ Expr* reduce_binop(Expr *e){
     //Get the type of the binary operation
     BinOp b = e->binop;
 
-    printf("reducing binop of type %d:\n", b);
-
     //cover commutative cases first
     switch(b){
         case BINOP_OR:
@@ -159,7 +157,6 @@ Expr* reduce_binop(Expr *e){
             // constant folding is possible (or in case of sub, can view as
             // commutative since x - y  =  x + (-y)
             return reduce_commutative_multiop(e);
-            printf("commutative reduce done\n");
             break;
         default:
             //do nothing for now in default case
@@ -322,7 +319,6 @@ Expr* reduce_commutative_multiop(Expr* e){
     //linearize expression, converting to list of terms at same precedence
     //level
     term_list = linearize_expression(e, std_op, inv_op, 0);
-    printf("linearization done\n");
 
     //now scan through the list, folding constant terms onto the RHS
     //expression, and appending others to the left
@@ -648,9 +644,6 @@ Exprs* linearize_expression(Expr* e, BinOp std_op, BinOp inv_op, int num_inv){
             e_list = (Exprs*) checked_malloc(sizeof(Exprs));
             e_list->first = reduce_expression(e1);
             e_list->rest = NULL;
-            printf("found atom: ");
-            print_expression(stdout, e_list->first, 0);
-            printf("\n");
         }
     }
     return e_list;
