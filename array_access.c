@@ -17,7 +17,7 @@
 
 
 Intervals *create_dbounds_node(int lower, int upper, int offset_coefficient);
-Exprs *create_doffsets_node(Expr *index_e, int offset_coefficient);
+Exprs *create_doffsets_node(Expr *index_e, int offset_coefficient, int lower);
 
 ArrayAccess *get_array_access(Expr *expr, Bounds *array_bounds) {
     //get array index expressions
@@ -61,7 +61,7 @@ ArrayAccess *get_array_access(Expr *expr, Bounds *array_bounds) {
         if (next_index->kind == EXPR_CONST) {
             //if constant expression, add to the static_offset
             int index_val = next_index->constant.val.int_val;
-            static_offset += (offset_coefficient * index_val); 
+            static_offset += offset_coefficient * (index_val - lower);
             if (index_val < lower || index_val > upper) {
                 //in this case we have failed static bounds check
                 is_in_static_bounds = FALSE;
@@ -88,7 +88,7 @@ ArrayAccess *get_array_access(Expr *expr, Bounds *array_bounds) {
             //calculate and reduce the expression for calculating the
             //dynamic offset
             Exprs *dynamic_offsets_node = create_doffsets_node(next_index,
-                    offset_coefficient);
+                    offset_coefficient, lower);
             //append node at end of list
             if (dynamic_offsets == NULL) {
                 //this means it is first node of list
@@ -127,8 +127,12 @@ Intervals *create_dbounds_node(int lower, int upper, int offset_coefficient) {
         = (Interval*) checked_malloc(sizeof(Interval));
     Intervals *dynamic_bounds_node 
         = (Intervals*) checked_malloc(sizeof(Intervals));
-    offset_bounds->lower = offset_coefficient * lower;
-    offset_bounds->upper = offset_coefficient * upper;
+    //take into account that offset has lower bound subtracted, then entire
+    //number is multiplied by coefficient
+    //so we must perform the same operation to the bounds to make the array
+    //bounds checking at run-time for offsets sound
+    offset_bounds->lower = 0;
+    offset_bounds->upper = offset_coefficient * (upper - lower);
     dynamic_bounds_node->first = offset_bounds;
     dynamic_bounds_node->rest = NULL;
     return dynamic_bounds_node;
@@ -140,26 +144,47 @@ Intervals *create_dbounds_node(int lower, int upper, int offset_coefficient) {
     index expression, and offset_coefficient, and returns a pointer
     to this node
 -----------------------------------------------------------------------*/
-Exprs *create_doffsets_node(Expr *index_e, int offset_coefficient) {
-    Expr *dynamic_offset_expr = (Expr*) checked_malloc(sizeof(Expr));
+Exprs *create_doffsets_node(Expr *index_e, int offset_coefficient, int lower) {
+    Expr *e1 = (Expr*) checked_malloc(sizeof(Expr));
+    Expr *e2 = (Expr*) checked_malloc(sizeof(Expr));
+    Expr *e_offset = (Expr*) checked_malloc(sizeof(Expr));
     Exprs *dynamic_offset_node = (Exprs*) checked_malloc(sizeof(Exprs));
 
-    //create a BINOP expression, multiplying by the offset
-    dynamic_offset_expr->kind = EXPR_BINOP;
-    dynamic_offset_expr->lineno = index_e->lineno;
-    dynamic_offset_expr->binop = BINOP_MUL;
-    //link the index expression for e1
-    dynamic_offset_expr->e1 = index_e;
-    //create a constant node for e2
-    dynamic_offset_expr->e2 = (Expr*) checked_malloc(sizeof(Expr));
-    dynamic_offset_expr->e2->kind = EXPR_CONST;
-    dynamic_offset_expr->e2->lineno = index_e->lineno;
-    dynamic_offset_expr->e2->constant.type = INT_TYPE;
-    dynamic_offset_expr->e2->constant.val.int_val = offset_coefficient;
+    //create a BINOP expression, of the form:
+    //  coefficient*index - coefficient*lower 
+
+    //create the LHS expression first
+    e1->kind = EXPR_BINOP;
+    e1->lineno = index_e->lineno;
+    e1->binop = BINOP_MUL;
+    e1->inferred_type = INT_TYPE;
+    //link the index expression for sub expression 1
+    e1->e1 = index_e;
+    //create a constant node for sub expression 2
+    e1->e2 = (Expr*) checked_malloc(sizeof(Expr));
+    e1->e2->kind = EXPR_CONST;
+    e1->e2->lineno = index_e->lineno;
+    e1->e2->constant.type = INT_TYPE;
+    e1->e2->constant.val.int_val = offset_coefficient;
+    e1->e2->inferred_type = INT_TYPE;
+
+    //create the RHS expression now
+    e2->kind = EXPR_CONST;
+    e2->lineno = index_e->lineno;
+    e2->constant.type = INT_TYPE;
+    e2->constant.val.int_val = offset_coefficient*lower;
+
+    //now combine them
+    e_offset->kind = EXPR_BINOP;
+    e_offset->lineno = index_e->lineno;
+    e_offset->binop = BINOP_SUB;
+    e_offset->e1 = e1;
+    e_offset->e2 = e2;
+    e_offset->inferred_type = INT_TYPE;
 
     //finally attempt to reduce the expression we have created, and link
     //from the new node
-    dynamic_offset_node->first = reduce_expression(dynamic_offset_expr);
+    dynamic_offset_node->first = reduce_expression(e_offset);
     dynamic_offset_node->rest = NULL;
     return dynamic_offset_node;
 }
