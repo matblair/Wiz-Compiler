@@ -359,8 +359,15 @@ gen_oz_read(OzProgram *p, Expr *read, void *table) {
     }
 
     if (read->kind == EXPR_ARRAY) {
-        gen_oz_expr_array_addr(p, 1, read, table);
-        gen_binop(p, OP_STORE_INDIRECT, 1, 0);
+        //if array access is entirely static, store directly
+        Bounds *bounds = sym->bounds;
+        ArrayAccess *array_access = get_array_access(read, bounds);
+        if (array_access->dynamic_bounds == NULL) {
+            gen_binop(p, OP_STORE, sym->slot + array_access->static_offset, 0);
+        } else {
+            gen_oz_expr_array_addr(p, 1, read, table);
+            gen_binop(p, OP_STORE_INDIRECT, 1, 0);
+        }
     }
     else if (sym->kind == SYM_PARAM_REF) {
         gen_binop(p, OP_LOAD, 1, sym->slot);
@@ -388,8 +395,15 @@ gen_oz_assign(OzProgram *p, Assign *assign, void *table) {
 
     // Store the value
     if (assign->asg_ident->kind == EXPR_ARRAY){
-        gen_oz_expr_array_addr(p, 1, assign->asg_ident, table);
-        gen_binop(p, OP_STORE_INDIRECT, 1, 0);
+        //if array access is entirely static, store directly
+        Bounds *bounds = sym->bounds;
+        ArrayAccess *array_access = get_array_access(assign->asg_ident, bounds);
+        if (array_access->dynamic_bounds == NULL) {
+            gen_binop(p, OP_STORE, sym->slot + array_access->static_offset, 0);
+        } else {
+            gen_oz_expr_array_addr(p, 1, assign->asg_ident, table);
+            gen_binop(p, OP_STORE_INDIRECT, 1, 0);
+        }
     }
     else if (sym->kind == SYM_PARAM_REF) {
         gen_binop(p, OP_LOAD, 1, sym->slot);
@@ -565,8 +579,16 @@ gen_oz_expr_const(OzProgram *p, int reg, Constant *constant) {
 // evaluate an array expr, storing value in reg
 void
 gen_oz_expr_array_val(OzProgram *p, int reg, Expr *a, void *table) {
-    gen_oz_expr_array_addr(p, reg, a, table);
-    gen_binop(p, OP_LOAD_INDIRECT, reg, reg);
+    //if array access is static, load directly
+    symbol *sym = retrieve_symbol_in_scope(a->id, table);
+    Bounds *bounds = sym->bounds;
+    ArrayAccess *array_access = get_array_access(a, bounds);
+    if (array_access->dynamic_bounds == NULL) {
+        gen_binop(p, OP_LOAD, reg, sym->slot + array_access->static_offset);
+    } else {
+        gen_oz_expr_array_addr(p, reg, a, table);
+        gen_binop(p, OP_LOAD_INDIRECT, reg, reg);
+    }
 }
 
 // store the address of an array value in a register
