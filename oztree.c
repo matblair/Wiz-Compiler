@@ -543,7 +543,11 @@ gen_oz_expr_id(OzProgram *p, int reg, char *id, void *table) {
     symbol *sym = retrieve_symbol_in_scope(id, table);
 
     if (sym->kind == SYM_PARAM_REF) {
-        gen_binop(p, OP_LOAD_INDIRECT, reg, sym->slot);
+        //first load address of the variable to register reg
+        //use regular load as the value is already an address
+        gen_binop(p, OP_LOAD, reg, sym->slot);
+        //then load indirectly using this address
+        gen_binop(p, OP_LOAD_INDIRECT, reg, reg);
     }
     else {
         gen_binop(p, OP_LOAD, reg, sym->slot);
