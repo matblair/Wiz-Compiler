@@ -332,6 +332,7 @@ Expr* reduce_commutative_multiop(Expr* e){
     Exprs* neg_list_start = NULL;
     UnOp neg_op;
     Expr* const_node = checked_malloc(sizeof(Expr));
+    const_node->inferred_type = -1;
 
     const_node->kind = EXPR_CONST;
     const_node->lineno = e->lineno;
@@ -512,6 +513,8 @@ Expr* generate_binop_node(BinOp op, Expr* e1, Expr* e2, int lineno){
     node->binop = op;
     node->e1 = e1;
     node->e2 = e2;
+    //make sure node does not initially match any type
+    node->inferred_type = -1;
     return node;
 }
 
@@ -829,6 +832,8 @@ Expr* generate_unop_node(UnOp op, Expr* e1, int lineno){
     node->unop = op;
     node->e1 = e1;
     node->lineno = lineno;
+    //make sure node does not automatically match any type
+    node->inferred_type = -1;
     return node;
 }
 

@@ -681,15 +681,14 @@ gen_oz_expr_binop(OzProgram *p, int reg, Expr *expr, void *table) {
     }
 
     // generate the code
-    if (e1type == INT_TYPE && e2type == INT_TYPE) {
-        gen_oz_expr_binop_int(p, reg, reg, reg + 1, expr);
+    if (e1type == BOOL_TYPE && e2type == BOOL_TYPE) {
+        gen_oz_expr_binop_bool(p, reg, reg, reg + 1, expr);
     }
     else if (e1type == FLOAT_TYPE || e2type == FLOAT_TYPE) {
         gen_oz_expr_binop_float(p, reg, reg, reg + 1, expr);
 
     } else {
-        gen_oz_expr_binop_bool(p, reg, reg, reg + 1, expr);
-
+        gen_oz_expr_binop_int(p, reg, reg, reg + 1, expr);
     }
 }
 

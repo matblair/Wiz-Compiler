@@ -157,7 +157,6 @@ Exprs *create_doffsets_node(Expr *index_e, int offset_coefficient, int lower) {
     e1->kind = EXPR_BINOP;
     e1->lineno = index_e->lineno;
     e1->binop = BINOP_MUL;
-    e1->inferred_type = INT_TYPE;
     //link the index expression for sub expression 1
     e1->e1 = index_e;
     //create a constant node for sub expression 2
@@ -166,7 +165,6 @@ Exprs *create_doffsets_node(Expr *index_e, int offset_coefficient, int lower) {
     e1->e2->lineno = index_e->lineno;
     e1->e2->constant.type = INT_TYPE;
     e1->e2->constant.val.int_val = offset_coefficient;
-    e1->e2->inferred_type = INT_TYPE;
 
     //create the RHS expression now
     e2->kind = EXPR_CONST;
@@ -180,11 +178,12 @@ Exprs *create_doffsets_node(Expr *index_e, int offset_coefficient, int lower) {
     e_offset->binop = BINOP_SUB;
     e_offset->e1 = e1;
     e_offset->e2 = e2;
-    e_offset->inferred_type = INT_TYPE;
 
     //finally attempt to reduce the expression we have created, and link
     //from the new node
     dynamic_offset_node->first = reduce_expression(e_offset);
+    //need to fill out inferred types recursively as INT_TYPE to prevent
+    //code generation from crashing
     dynamic_offset_node->rest = NULL;
     return dynamic_offset_node;
 }
