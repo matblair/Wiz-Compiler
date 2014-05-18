@@ -183,6 +183,10 @@ Expr* reduce_binop(Expr *e){
         case BINOP_DIV:
             //in this case just reduce if sub-expressions are constant
             if (t == INT_TYPE){
+                //don't divide by zero
+                if (e->e2->constant.val.int_val == 0) {
+                    return e;
+                }
                 new_constant.type = INT_TYPE;
                 new_constant.val.int_val = e->e1->constant.val.int_val
                     / e->e2->constant.val.int_val;
