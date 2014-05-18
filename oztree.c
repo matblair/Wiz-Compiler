@@ -13,6 +13,7 @@
 #include "helper.h"
 #include "error_printer.h"
 #include "pretty.h"
+#include "array_access.h"
 
 #define PROGENTRY "main"
 
@@ -573,40 +574,46 @@ void
 gen_oz_expr_array_addr(OzProgram *p, int reg, Expr *a, void *table) {
     symbol *sym = retrieve_symbol_in_scope(a->id, table);
     Bounds *bounds = sym->bounds;
-    Bound *bound;
-    Exprs *indices = a->indices;
-    Expr *index;
-    int frames;
+    ArrayAccess *array_access = get_array_access(a, bounds);
+    Exprs *dynamic_offsets = array_access->dynamic_offsets;
+    Intervals *dynamic_bounds = array_access->dynamic_bounds;
 
-    gen_int_const(p, reg, 0); // default to zero offset
+    // default to static offset
+    gen_int_const(p, reg, array_access->static_offset); 
 
-    // calculate the offset we want to apply
-    while(bounds != NULL) {
-        bound = bounds->first;
-        index = indices->first;
-
-        gen_oz_expr(p, reg + 1, index, table); // index being accessed
-        gen_int_const(p, reg + 2, bound->lower); // offset from start
-        gen_triop(p, OP_SUB_INT, reg + 1, reg + 1, reg + 2);
-        gen_int_const(p, reg + 2, bound->offset_size); // size of each offset
-        gen_triop(p, OP_MUL_INT, reg + 1, reg + 1, reg + 2);
-        gen_triop(p, OP_ADD_INT, reg, reg, reg + 1); // increase the offset
-
-        bounds = bounds->rest;
-        indices = indices->rest;
+    // check if we are in static bounds, if not create jump to out of bounds
+    // and do no more compilation for this access
+    if (!array_access->is_in_static_bounds) {
+        gen_unop(p, OP_BRANCH_UNCOND, OUT_OF_BOUNDS_LABEL);
+        return;
     }
 
-    // quit if the array element we're accessing is out of bounds
-    // offset < 0
-    gen_int_const(p, reg + 1, 0);
-    gen_triop(p, OP_CMP_LT_INT, reg + 1, reg, reg + 1);
-    gen_binop(p, OP_BRANCH_ON_TRUE, reg + 1, OUT_OF_BOUNDS_LABEL);
-    // offset > max
-    bound = sym->bounds->first;
-    frames = bound->offset_size * (bound->upper - bound->lower + 1);
-    gen_int_const(p, reg + 1, frames);
-    gen_triop(p, OP_CMP_GE_INT, reg + 1, reg, reg + 1);
-    gen_binop(p, OP_BRANCH_ON_TRUE, reg + 1, OUT_OF_BOUNDS_LABEL);
+    // calculate the dynamic offsets we want to apply, iteratively adding
+    // them to the total offset, and doing dynamic bounds checking for
+    // each dynamic offset
+    while(dynamic_offsets != NULL) {
+        Expr *dynamic_offset = dynamic_offsets->first;
+        Interval *bounds = dynamic_bounds->first;
+        // calculate the dynamic offset:
+        gen_oz_expr(p, reg + 1, dynamic_offset, table);
+
+        // check that it is in bounds
+        // offset < min_offset
+        gen_int_const(p, reg + 2, bounds->lower);
+        gen_triop(p, OP_CMP_LT_INT, reg + 2, reg + 1, reg + 2);
+        gen_binop(p, OP_BRANCH_ON_TRUE, reg + 2, OUT_OF_BOUNDS_LABEL);
+        // offset > max_offset
+        gen_int_const(p, reg + 2, bounds->upper);
+        gen_triop(p, OP_CMP_GT_INT, reg + 2, reg + 1, reg + 2);
+        gen_binop(p, OP_BRANCH_ON_TRUE, reg + 2, OUT_OF_BOUNDS_LABEL);
+
+        // add to the total offset so far
+        gen_triop(p, OP_ADD_INT, reg, reg, reg + 1);
+
+        //advance the lists we are iterating through
+        dynamic_offsets = dynamic_offsets->rest;
+        dynamic_bounds = dynamic_bounds->rest;
+    }
 
     // access the array element
     gen_binop(p, OP_LOAD_ADDRESS, reg + 1, sym->slot);

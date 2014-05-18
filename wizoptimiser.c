@@ -10,8 +10,7 @@
 #include "symbol.h"
 #include "bbst.h"
 #include "helper.h"
-
-#include "pretty.h"
+#include "wizoptimiser.h"
 
 /*----------------------------------------------------------------------
     Internal structures.  
@@ -21,7 +20,7 @@
     Internal function definitions.  
 -----------------------------------------------------------------------*/
 void reduce_statements(Stmts *statements);
-Expr* reduce_expression(Expr *e);
+
 void reduce_assigment(Assign *a);
 void reduce_if(Cond *c);
 Expr* reduce_binop(Expr *e);
