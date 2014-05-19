@@ -961,7 +961,7 @@ gen_real_const(OzProgram *p, int reg, float val) {
     int *preg = checked_malloc(sizeof(int));
     *preg = reg;
 
-    int *pval = checked_malloc(sizeof(float));
+    float *pval = checked_malloc(sizeof(float));
     *pval = val;
 
     OzOp *op = new_op(p);

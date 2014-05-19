@@ -151,12 +151,12 @@ Exprs *create_doffsets_node(Expr *index_e, int offset_coefficient, int lower) {
     Exprs *dynamic_offset_node = (Exprs*) checked_malloc(sizeof(Exprs));
 
     //create a BINOP expression, of the form:
-    //  coefficient*index - coefficient*lower 
+    // (index - lower) * offset_coefficient 
 
     //create the LHS expression first
     e1->kind = EXPR_BINOP;
     e1->lineno = index_e->lineno;
-    e1->binop = BINOP_MUL;
+    e1->binop = BINOP_SUB;
     //link the index expression for sub expression 1
     e1->e1 = index_e;
     //create a constant node for sub expression 2
@@ -164,18 +164,18 @@ Exprs *create_doffsets_node(Expr *index_e, int offset_coefficient, int lower) {
     e1->e2->kind = EXPR_CONST;
     e1->e2->lineno = index_e->lineno;
     e1->e2->constant.type = INT_TYPE;
-    e1->e2->constant.val.int_val = offset_coefficient;
+    e1->e2->constant.val.int_val = lower;
 
     //create the RHS expression now
     e2->kind = EXPR_CONST;
     e2->lineno = index_e->lineno;
     e2->constant.type = INT_TYPE;
-    e2->constant.val.int_val = offset_coefficient*lower;
+    e2->constant.val.int_val = offset_coefficient;
 
     //now combine them
     e_offset->kind = EXPR_BINOP;
     e_offset->lineno = index_e->lineno;
-    e_offset->binop = BINOP_SUB;
+    e_offset->binop = BINOP_MUL;
     e_offset->e1 = e1;
     e_offset->e2 = e2;
 
