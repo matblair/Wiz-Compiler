@@ -1,0 +1,23 @@
+proc main()
+    int x;
+    int y;
+    int z;
+    int w;
+
+    int A[3..9];
+
+    bool a;
+    bool b;
+    bool c;
+
+    write 1 + x + y + 6;
+    write 1 + ((x + y) + 6);
+    write (2 + (x + (y + (z + 5))));
+    write (((2 + x) + y*x) + 5);
+    write ---x - (y - (z - w));
+    write 4 * -(5.6 * (2*A[4]) * 9.9);
+    write 2 * 3 / 0;
+    write not (not ((not a) and (not b))) and not (not (not c)) and not false;
+    write not (not ((not a) and (not b))) and not (not (not c)) and not true;
+    write x + y;
+end

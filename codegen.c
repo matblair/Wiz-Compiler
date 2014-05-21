@@ -298,6 +298,20 @@ print_op(FILE *fp, OzOp *op) {
                     * (int *)op->arg1, * (int *)op->arg2);
             break;
 
+        case OP_DEBUG_REG:
+            fprintf(fp, "%*s r%d\n", INSTRWIDTH, "debug_reg",
+                    * (int *) op->arg1);
+            break;
+
+        case OP_DEBUG_SLOT:
+            fprintf(fp, "%*s %d\n", INSTRWIDTH, "debug_slot",
+                    * (int *) op->arg1);
+            break;
+
+        case OP_DEBUG_STACK:
+            fprintf(fp, "%*s\n", INSTRWIDTH, "debug_stack");
+            break;
+
         default:
             report_error_and_exit("operation not yet implemented!");
     }

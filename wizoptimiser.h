@@ -13,3 +13,4 @@
 -----------------------------------------------------------------------*/
 
 Program* reduce_ast(Program *p);
+Expr* reduce_expression(Expr *e);
