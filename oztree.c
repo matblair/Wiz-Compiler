@@ -14,6 +14,7 @@
 #include "error_printer.h"
 #include "pretty.h"
 #include "array_access.h"
+#include "std.h"
 
 #define PROGENTRY "main"
 
@@ -61,6 +62,8 @@ void gen_oz_expr_binop_bool(OzProgram *p, int r1, int r2, int r3, Expr *expr);
 void gen_oz_expr_binop_int(OzProgram *p, int r1, int r2, int r3, Expr *expr);
 void gen_oz_expr_binop_float(OzProgram *p, int r1, int r2, int r3, Expr *expr);
 void gen_oz_expr_unop(OzProgram *p, int reg, Expr *expr, void *table);
+
+int get_reg_usage(Expr *expr, void *table);
 
 OzLine *new_line(OzProgram *p);
 OzOp *new_op(OzProgram *p);
@@ -113,6 +116,7 @@ gen_oz_procs(OzProgram *p, Procs *procs, void *tables) {
 
     Proc *proc = procs->first;
     void *table = find_scope(proc->header->id, tables);
+
 
     gen_proc_label(p, proc->header->id);
     gen_oz_prologue(p, proc->header->params, proc->body->decls, table);
@@ -169,7 +173,7 @@ gen_oz_decls(OzProgram *p, Decls *decls, void *table) {
     ds = decls;
     while (ds != NULL) {
         decl = ds->first;
-          
+
         sym = retrieve_symbol_in_scope(decl->id, (scope *)table);
         
         if (!reals && sym->type == SYM_REAL) {
@@ -657,38 +661,52 @@ gen_oz_expr_binop(OzProgram *p, int reg, Expr *expr, void *table) {
     int e2type = expr->e2->inferred_type;
 
     // Eval sub expressions
-    gen_oz_expr(p, reg, expr->e1, table);
-    gen_oz_expr(p, reg + 1, expr->e2, table);
+    // evaluate the more register intensive sub-expression in reg, and the
+    // lower in reg+1, in order to minimise total register usage
+    int reg_usage_1 = get_reg_usage(expr->e1, table);
+    int reg_usage_2 = get_reg_usage(expr->e2, table);
+    int expr1_reg, expr2_reg;
+    if (reg_usage_1 >= reg_usage_2) {
+        expr1_reg = reg;
+        expr2_reg = reg+1;
+        gen_oz_expr(p, reg, expr->e1, table);
+        gen_oz_expr(p, reg + 1, expr->e2, table);
+    } else {
+        expr1_reg = reg+1;
+        expr2_reg = reg;
+        gen_oz_expr(p, reg, expr->e2, table);
+        gen_oz_expr(p, reg + 1, expr->e1, table);
+    }
 
     // check for div by 0
     if (expr->binop == BINOP_DIV) {
         if (e2type == FLOAT_TYPE) {
             gen_real_const(p, reg + 2, 0.0f);
-            gen_triop(p, OP_CMP_EQ_REAL, reg + 2, reg + 2, reg + 1);
+            gen_triop(p, OP_CMP_EQ_REAL, reg + 2, reg + 2, expr2_reg);
         } else {
             gen_int_const(p, reg + 2, 0);
-            gen_triop(p, OP_CMP_EQ_INT, reg + 2, reg + 2, reg + 1);
+            gen_triop(p, OP_CMP_EQ_INT, reg + 2, reg + 2, expr2_reg);
         }
         gen_binop(p, OP_BRANCH_ON_TRUE, reg + 2, DIV_BY_ZERO_LABEL);
     }
 
     // deal with operations with both int and float
     if (e1type == INT_TYPE && e2type == FLOAT_TYPE) {
-        gen_binop(p, OP_INT_TO_REAL, reg, reg);
+        gen_binop(p, OP_INT_TO_REAL, expr1_reg, expr1_reg);
     }
     else if (e1type == FLOAT_TYPE && e2type == INT_TYPE) {
-        gen_binop(p, OP_INT_TO_REAL, reg + 1, reg + 1);
+        gen_binop(p, OP_INT_TO_REAL, expr2_reg, expr2_reg);
     }
 
     // generate the code
     if (e1type == BOOL_TYPE && e2type == BOOL_TYPE) {
-        gen_oz_expr_binop_bool(p, reg, reg, reg + 1, expr);
+        gen_oz_expr_binop_bool(p, reg, expr1_reg, expr2_reg, expr);
     }
     else if (e1type == FLOAT_TYPE || e2type == FLOAT_TYPE) {
-        gen_oz_expr_binop_float(p, reg, reg, reg + 1, expr);
+        gen_oz_expr_binop_float(p, reg, expr1_reg, expr2_reg, expr);
 
     } else {
-        gen_oz_expr_binop_int(p, reg, reg, reg + 1, expr);
+        gen_oz_expr_binop_int(p, reg, expr1_reg, expr2_reg, expr);
     }
 }
 
@@ -839,6 +857,87 @@ gen_oz_expr_unop(OzProgram *p, int reg, Expr *expr, void *table) {
     }
 }
 
+
+/*-----------------------------------------------------------------------------
+    Helper function for generating expression code with minimal register
+    usage (calculates the number of extra registes (not including the
+    register where result will be saved), needed to evaluate a given
+    expression
+-----------------------------------------------------------------------------*/
+int
+get_reg_usage(Expr *expr, void *table) {
+    int reg_usage_1, reg_usage_2, min_count, max_count, reg_usage_total;
+    symbol *sym;
+    Bounds *bounds;
+    ArrayAccess *array_access;
+    Exprs *exprs;
+    // Switch based on expression kind
+    switch(expr->kind) {
+        case EXPR_ID:
+        case EXPR_CONST:
+            // no exra registers needed in these cases
+            // (no intermediates involved)
+            return 0;
+            break;
+
+        case EXPR_BINOP:
+            // assuming our optimization to reduce unnecessary register usage,
+            // we store the sub-expression with greater register usage in
+            // reg, and the other in reg+1, so calculate accordingly
+            reg_usage_1 = get_reg_usage(expr->e1, table);
+            reg_usage_2 = get_reg_usage(expr->e2, table);
+            min_count = min(reg_usage_1, reg_usage_2);
+            max_count = max(reg_usage_1, reg_usage_2);
+            reg_usage_total = max(max_count, min_count+1);
+            // if the binop expression is DIV, need at least one extra
+            // register for comparison of RHS to zero
+            if (expr->binop == BINOP_DIV) {
+                return max(reg_usage_total, 2);
+            } else {
+                return reg_usage_total;
+            }
+            break;
+
+        case EXPR_UNOP:
+            // for UNOP_MINUS case, use an additional register at least to
+            // store the 0 for subtration
+            reg_usage_1 = get_reg_usage(expr->e1, table);
+            if (expr->unop == UNOP_MINUS) {
+                return max(reg_usage_1, 1);
+            } else {
+                return reg_usage_1;
+            }
+            break;
+
+        case EXPR_ARRAY:
+            // if array access is static do not need any extra regs
+            sym = retrieve_symbol_in_scope(expr->id, table);
+            bounds = sym->bounds;
+            array_access = get_array_access(expr, bounds);
+            exprs = array_access->dynamic_offsets;
+            if (exprs == NULL) {
+                return 0;
+            } else {
+                // otherwise need to compare to register usage of
+                // each index expression
+                reg_usage_total = 0;
+                while (exprs != NULL) {
+                    // each expr requires an extra register to save its
+                    // result, and in addition uses at least one additional
+                    // register for bounds checking
+                    reg_usage_1 = max(get_reg_usage(exprs->first,
+                                table) + 1, 2);
+                    reg_usage_total = max(reg_usage_1, reg_usage_total);
+                    exprs = exprs->rest;
+                }
+                return reg_usage_total;
+            }
+            break;
+                
+        default:
+            report_error_and_exit("unknown expr type!");
+    }
+}
 
 /*-----------------------------------------------------------------------------
  * Create new Oz structures to represent code

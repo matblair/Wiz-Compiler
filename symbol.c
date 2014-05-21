@@ -175,6 +175,7 @@ generate_decls_symbols(Decls *decls, scope *sc, sym_table *prog) {
         sc->next_slot++;
         s->type = sym_type_from_ast_type(decl->type);
         s->used = FALSE;
+        s->bounds = NULL;
         Bound *bound;
         int frames;
 

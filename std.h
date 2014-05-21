@@ -8,6 +8,7 @@
 #define STD_H
 
 #define max(a, b)     ((a) < (b) ? (b) : (a))
+#define min(a,b)      ((a) > (b) ? (b) : (a))
 #define max3(a, b, c) (max((a), max((b), (c))))
 
 #define streq(s1, s2) (strcmp((s1), (s2)) == 0)
