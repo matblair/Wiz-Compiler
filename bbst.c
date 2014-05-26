@@ -2,11 +2,8 @@
 
 /*------------------------------------------------------------------------------
     Developed by: #undef TEAMNAME
-    Provides a symbol table for use in semantic analysis and compilation
-    of programs from the wiz languge to Oz machine code.
-
-    The table is laid out as follows
-
+    
+    Provides a balanced binary search tree for use in the symbol table.
 ------------------------------------------------------------------------------*/
 #include "bbst.h"
 #include "helper.h"
@@ -88,7 +85,7 @@ recursive_find(void *id, t_node *head, int (*comp)(const void *,
     return head->current;
 }
 
-// A recursive implementation of insertion in a binary tree, it's easier to 
+// A recursive implementation of insertion in a binary tree, it's easier to
 // keep track of the skew and split operations applying them like this.
 void *
 bbst_insert(void *search, void *key, void *value,
@@ -102,12 +99,12 @@ bbst_insert(void *search, void *key, void *value,
     t_node *head = (t_node *) search;
 
     // If we haven't found it then we have to go fishing!
-    // We determine the direction we set off using our handy built in 
+    // We determine the direction we set off using our handy built in
     // key_comp function. If key compare shows smaller go left, else go right,
     // like a recursive (i.e. lazy) binary search.
     int side = (*comp)(key, head->current);
-    if (side == 0) { 
-        // Then the keys are identical so we should 
+    if (side == 0) {
+        // Then the keys are identical so we should
         //update the records.
         head->current = value;
     } else {

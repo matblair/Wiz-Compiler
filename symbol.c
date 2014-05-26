@@ -1,10 +1,19 @@
 /* symbol.c */
 
-/*-----------------------------------------------------------------------
+/*------------------------------------------------------------------------------
     Developed by: #undef TEAMNAME
     Provides a symbol table for use in semantic analysis and compilation
     of programs from the wiz languge to Oz machine code.
------------------------------------------------------------------------*/
+
+    This table makes use of our balanced binary tree implementation and contains
+    any information required for quick analysis and optimisation as well as 
+    code generation.
+
+    It is laid out as a table of tables, the first level representing scope
+    (in this case procs) and then each sub table representing the symbols from
+    each proc.
+
+------------------------------------------------------------------------------*/
 #include <string.h>
 #include "symbol.h"
 #include "bbst.h"

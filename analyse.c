@@ -2,8 +2,8 @@
 
 /*-----------------------------------------------------------------------
     Developed by: #undef TEAMNAME
-    Provides static analysis of a given program in a
-
+    Provides static analysis of a given program respresented by an ast 
+    tree in combination with the symbol table.
 -----------------------------------------------------------------------*/
 #include <stdlib.h>
 #include <string.h>

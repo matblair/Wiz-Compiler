@@ -1,12 +1,17 @@
-/*                     Project 1B 2014                                 */
+/*                          Project 3B 2014                            */
 /*-----------------------------------------------------------------------
-	Readme for project 1b submission.
+	Readme for final COMP90045 submission.
 	Developed by: #undef TEAMNAME
 -----------------------------------------------------------------------*/
 
 The purpose of this readme is to note a few assumptions/modifications
 we have made to the language at the bequest of Harald who has given
-permission to make these changes.
+permission to make these changes. Then we note the extra details and usage
+instructions for our wiz compiler.
+
+/*-----------------------------------------------------------------------
+	Language assumptions
+-----------------------------------------------------------------------*/
 
 1. We are assuming interval terminals in array declaration are non-negative
 
@@ -17,6 +22,33 @@ permission to make these changes.
    alternatives are to store number of digits of precision alongside the 
    float (messy), or store as a string (inconsistent with boolean and 
    integer values), so this is the least of three evils.
+
+/*-----------------------------------------------------------------------
+	Wiz usage
+-----------------------------------------------------------------------*/
+
+We have added several options to the compiler to accomodate for the various
+new functions we have added. These additonal functions are as follows.
+
+ 	-f : compile with optimisation and output to the filename.oz
+    -c : optimise and reduce expressions, printing the before
+         after results along with any errors.
+    -o : compile with optimisation and output to stdout.
+
+These options are also available through the usage prompt printed when a user
+enters "wiz" or "./wiz" without appropriate input options. We have separated
+the optimisation options from compilation to allow users to choose to forgo 
+these optimisations if they think best (i.e. if they're trying to be 'clever').
+
+/*-----------------------------------------------------------------------
+	Optimisation Strategies
+-----------------------------------------------------------------------*/
+
+
+/*-----------------------------------------------------------------------
+	Other clever things
+-----------------------------------------------------------------------*/
+
 
 Please contact any of the group members should you have any additional
 concerns. 
