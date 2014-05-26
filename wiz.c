@@ -24,7 +24,6 @@
 #include    "wizoptimiser.h"
 #include    "error_printer.h"
 
-
 const char  *progname;
 const char  *iz_infile;
 Program     *parsed_program = NULL;
@@ -113,10 +112,28 @@ main(int argc, char **argv) {
         reduce_ast(parsed_program);
     } else if (to_file) {
         reduce_ast(parsed_program);
-        char *outfile = checked_malloc((strlen(in_filename) + 1) * sizeof(char));
-        strncpy(outfile, in_filename, strlen(in_filename) - 3);
+        int in_filename_len = strlen(in_filename);
+        char *outfile = checked_malloc((strlen(in_filename) + 4) * sizeof(char));
+        //suffix points to the '.' in filename, assuming it ends in ".wiz"
+        const char *suffix = &in_filename[in_filename_len - 4];
 
-        char *ending = "oz";
+        //decide whether there is a ".wiz" suffix to remove or not
+        if (in_filename_len > 3 && strcmp(suffix, ".wiz") == 0) {
+            //in this case remove the last three characters (w, i and z)
+            strncpy(outfile, in_filename, in_filename_len - 3);
+            //append null-byte because strncpy does not do this automatically
+            outfile[in_filename_len - 3] = '\0';
+        }
+        else {
+            //if suffix is not ".wiz", just append ".oz" to end of name
+            strncpy(outfile, in_filename, in_filename_len);
+            outfile[in_filename_len] = '.';
+            //append nullbute in preparation of appending "oz"
+            outfile[in_filename_len + 1] = '\0';
+        }
+
+        //finally add the "oz" to end of name
+        const char *ending = "oz";
         strcat(outfile, ending);
 
         printf("%s\n", outfile);
@@ -131,11 +148,19 @@ main(int argc, char **argv) {
 
 static void
 usage(void) {
-    printf("usage: wiz [-p|-o|-c|-f] iz_source_file\n");
-    printf("\t -f : compile with optimisation and output to the filename.oz\n");
-    printf("\t -c : optimise and reduce expressions, printing the before \n");
-    printf("\t      after results along with any errors.\n");
-    printf("\t -o : compile with optimisation and output to stdout.\n\n");
+    printf("usage: wiz [-p|-o|-c|-f] iz_source_file\n"
+           "\t -p : Parses program and pretty prints internal\n"
+           "\t      representation to stdout.\n"
+           "\t -o : Compile with optimisations enabled.\n"
+           "\t      Output is written to stdout.\n"
+           "\t -c : Optimise and reduce expressions, printing the before\n"
+           "\t      and after results, along with any errors.\n"
+           "\t      Output is written to stdout.\n"
+           "\t -f : Compile with optimisations enabled.\n"
+           "\t      Output is written to file WIZ_SOURCE_PREFIX.oz (where\n"
+           "\t      WIZ_SOURCE_PREFIX is the prefix of wiz_source_file\n"
+           "\t      - i.e. with '.wiz' suffix removed, if present).\n");
+
 }
 
 /*---------------------------------------------------------------------*/
