@@ -17,26 +17,26 @@
 #define INDENTS "    "
 #define INSTRWIDTH (-16)
 
-// /*-----------------------------------------------------------------------------
-//  * Function prototypes for internal functions
-//  *---------------------------------------------------------------------------*/
+/*-----------------------------------------------------------------------------
+ * Function prototypes for internal functions
+ *---------------------------------------------------------------------------*/
 
 void print_lines(FILE *, OzLines *);
 void print_op(FILE *, OzOp *);
 
 
-// /*-----------------------------------------------------------------------------
-//  * Functions from header file
-//  *---------------------------------------------------------------------------*/
+/*-----------------------------------------------------------------------------
+ * Functions from header file
+ *---------------------------------------------------------------------------*/
 
-// // Compiles a Wiz program to Oz, outputting to fp. Returns 0 for success.
-int 
+// Compiles a Wiz program to Oz, outputting to fp. Returns 0 for success.
+int
 compile(FILE *fp, Program *prog) {
-	void *table = analyse(prog);
-	if(table == NULL){
-		//Then did not pass semantic analysis. Exit
-		report_error_and_exit("Invalid program.");
-	}
+    void *table = analyse(prog);
+    if (table == NULL) {
+        //Then did not pass semantic analysis. Exit
+        report_error_and_exit("Invalid program.");
+    }
     OzProgram *ozprog = gen_oz_program(prog, table);
     print_lines(fp, ozprog->start);
     return (int)(!ozprog);
@@ -53,7 +53,7 @@ print_lines(FILE *fp, OzLines *lines) {
         return; // end of program
     }
 
-    switch(lines->first->kind) {
+    switch (lines->first->kind) {
         case OZ_OP:
             print_op(fp, (OzOp *) lines->first->val);
             break;
@@ -85,7 +85,7 @@ void
 print_op(FILE *fp, OzOp *op) {
     fprintf(fp, INDENTS); // indent all ops
 
-    switch(op->code) {
+    switch (op->code) {
         case OP_CALL:
             fprintf(fp, "%*s proc_%s\n", INSTRWIDTH, "call", (char *)op->arg1);
             break;
@@ -176,7 +176,7 @@ print_op(FILE *fp, OzOp *op) {
             fprintf(fp, "%*s r%d, r%d, r%d\n", INSTRWIDTH, "add_real",
                     * (int *)op->arg1, * (int *)op->arg2, * (int *)op->arg3);
             break;
-            
+
         case OP_ADD_OFFSET:
             fprintf(fp, "%*s r%d, r%d, r%d\n", INSTRWIDTH, "add_offset",
                     * (int *)op->arg1, * (int *)op->arg2, * (int *)op->arg3);
@@ -191,7 +191,7 @@ print_op(FILE *fp, OzOp *op) {
             fprintf(fp, "%*s r%d, r%d, r%d\n", INSTRWIDTH, "sub_real",
                     * (int *)op->arg1, * (int *)op->arg2, * (int *)op->arg3);
             break;
-            
+
         case OP_SUB_OFFSET:
             fprintf(fp, "%*s r%d, r%d, r%d\n", INSTRWIDTH, "sub_offset",
                     * (int *)op->arg1, * (int *)op->arg2, * (int *)op->arg3);
@@ -216,72 +216,72 @@ print_op(FILE *fp, OzOp *op) {
             fprintf(fp, "%*s r%d, r%d, r%d\n", INSTRWIDTH, "div_real",
                     * (int *)op->arg1, * (int *)op->arg2, * (int *)op->arg3);
             break;
-            
+
         case OP_CMP_EQ_INT:
             fprintf(fp, "%*s r%d, r%d, r%d\n", INSTRWIDTH, "cmp_eq_int",
                     * (int *)op->arg1, * (int *)op->arg2, * (int *)op->arg3);
             break;
-            
+
         case OP_CMP_NE_INT:
             fprintf(fp, "%*s r%d, r%d, r%d\n", INSTRWIDTH, "cmp_ne_int",
                     * (int *)op->arg1, * (int *)op->arg2, * (int *)op->arg3);
             break;
-            
+
         case OP_CMP_GT_INT:
             fprintf(fp, "%*s r%d, r%d, r%d\n", INSTRWIDTH, "cmp_gt_int",
                     * (int *)op->arg1, * (int *)op->arg2, * (int *)op->arg3);
             break;
-            
+
         case OP_CMP_GE_INT:
             fprintf(fp, "%*s r%d, r%d, r%d\n", INSTRWIDTH, "cmp_ge_int",
                     * (int *)op->arg1, * (int *)op->arg2, * (int *)op->arg3);
             break;
-            
+
         case OP_CMP_LT_INT:
             fprintf(fp, "%*s r%d, r%d, r%d\n", INSTRWIDTH, "cmp_lt_int",
                     * (int *)op->arg1, * (int *)op->arg2, * (int *)op->arg3);
             break;
-            
+
         case OP_CMP_LE_INT:
             fprintf(fp, "%*s r%d, r%d, r%d\n", INSTRWIDTH, "cmp_le_int",
                     * (int *)op->arg1, * (int *)op->arg2, * (int *)op->arg3);
             break;
-            
+
         case OP_CMP_EQ_REAL:
             fprintf(fp, "%*s r%d, r%d, r%d\n", INSTRWIDTH, "cmp_eq_real",
                     * (int *)op->arg1, * (int *)op->arg2, * (int *)op->arg3);
             break;
-            
+
         case OP_CMP_NE_REAL:
             fprintf(fp, "%*s r%d, r%d, r%d\n", INSTRWIDTH, "cmp_ne_real",
                     * (int *)op->arg1, * (int *)op->arg2, * (int *)op->arg3);
             break;
-            
+
         case OP_CMP_GT_REAL:
             fprintf(fp, "%*s r%d, r%d, r%d\n", INSTRWIDTH, "cmp_gt_real",
                     * (int *)op->arg1, * (int *)op->arg2, * (int *)op->arg3);
             break;
-            
+
         case OP_CMP_GE_REAL:
             fprintf(fp, "%*s r%d, r%d, r%d\n", INSTRWIDTH, "cmp_ge_real",
                     * (int *)op->arg1, * (int *)op->arg2, * (int *)op->arg3);
             break;
-            
+
         case OP_CMP_LT_REAL:
             fprintf(fp, "%*s r%d, r%d, r%d\n", INSTRWIDTH, "cmp_lt_real",
                     * (int *)op->arg1, * (int *)op->arg2, * (int *)op->arg3);
             break;
-            
+
         case OP_CMP_LE_REAL:
             fprintf(fp, "%*s r%d, r%d, r%d\n", INSTRWIDTH, "cmp_le_real",
                     * (int *)op->arg1, * (int *)op->arg2, * (int *)op->arg3);
             break;
-            
+
         case OP_AND:
             fprintf(fp, "%*s r%d, r%d, r%d\n", INSTRWIDTH, "and",
                     * (int *)op->arg1, * (int *)op->arg2, * (int *)op->arg3);
             break;
-            
+
         case OP_OR:
             fprintf(fp, "%*s r%d, r%d, r%d\n", INSTRWIDTH, "or",
                     * (int *)op->arg1, * (int *)op->arg2, * (int *)op->arg3);
@@ -294,7 +294,7 @@ print_op(FILE *fp, OzOp *op) {
 
 
         case OP_INT_TO_REAL:
-           fprintf(fp, "%*s r%d, r%d\n", INSTRWIDTH, "int_to_real",
+            fprintf(fp, "%*s r%d, r%d\n", INSTRWIDTH, "int_to_real",
                     * (int *)op->arg1, * (int *)op->arg2);
             break;
 

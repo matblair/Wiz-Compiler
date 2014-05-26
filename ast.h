@@ -3,8 +3,8 @@
 /*-----------------------------------------------------------------------
     Developed by: #undef TEAMNAME
     Based on template code provided by Harald Sondergard for COMP90045.
-    Provides full abstract syntax tree implementation for the Wiz 
-    programming language. 
+    Provides full abstract syntax tree implementation for the Wiz
+    programming language.
 
     Original message included as follows:
 
@@ -39,8 +39,8 @@ typedef struct intervals    Intervals;
 typedef struct interval     Interval;
 
 /*----------------------------------------------------------------------
-    Definitions for binary and unary operations as well as their 
-    associated precedences. 
+    Definitions for binary and unary operations as well as their
+    associated precedences.
 -----------------------------------------------------------------------*/
 
 typedef enum {
@@ -54,8 +54,8 @@ typedef enum {
 #define BINOP_PRECEDENCE 4, 4, 5, 5, 0, 1, 3, 3, 3, 3, 3, 3
 
 // External definitions for array access
-extern const char *binopname[]; 
-extern const int  binopprec[]; 
+extern const char *binopname[];
+extern const int  binopprec[];
 
 
 typedef enum {
@@ -68,10 +68,10 @@ typedef enum {
 
 // External definitions for array access
 extern const char *unopname[];
-extern const int  unopprec[];  
+extern const int  unopprec[];
 
 /*----------------------------------------------------------------------
-    Definitions for types and argument types. 
+    Definitions for types and argument types.
 -----------------------------------------------------------------------*/
 
 typedef enum {
@@ -95,7 +95,7 @@ typedef enum {
 extern const char *typenames[];
 
 /*----------------------------------------------------------------------
-    Definitions for constants 
+    Definitions for constants
 -----------------------------------------------------------------------*/
 
 typedef union {
@@ -123,7 +123,7 @@ typedef enum {
 
 struct expr {
     int       lineno;
-    ExprKind  kind;           
+    ExprKind  kind;
     char      *id;          /* for identifiers */
     Constant  constant;     /* for constant values */
     UnOp      unop;         /* for unary operators */
@@ -156,8 +156,8 @@ struct decls {
     Decls     *rest;
 };
 
-// Used for array interval declaration, only ever used for declarations, 
-// not for array indice access and therefore should be grouped with the 
+// Used for array interval declaration, only ever used for declarations,
+// not for array indice access and therefore should be grouped with the
 // declarations.
 
 struct intervals {
@@ -192,14 +192,14 @@ typedef struct {
 
 // An array consisters of an identifier to later be used to access the symbol
 // table for information about the array, followed by a series of expressions
-// to denote indices for access to a value. 
+// to denote indices for access to a value.
 struct array {
     char   *id;
     Exprs  *indices;
 };
 
 // A while loop contains a condition that must be met, followed by
-// the body of cody that is run if that condition is satisfied. 
+// the body of cody that is run if that condition is satisfied.
 typedef struct {
     Expr      *cond;
     Stmts     *body;
@@ -207,17 +207,17 @@ typedef struct {
 
 
 // A function consists of an identier, follow by a linked list of expressions
-// that are arguments to that function. 
+// that are arguments to that function.
 struct func {
     char  *id;
     Exprs *args;
 };
 
 
-// SInfo stores the required information to describe a statement in the 
+// SInfo stores the required information to describe a statement in the
 // program. It can be, at most, one of the following seven types: An assignment
 // a condition (if etc), a read expression, a write expression, a function
-// a while loop or a further list of statements. 
+// a while loop or a further list of statements.
 
 typedef union {
     Assign    assign;
@@ -253,14 +253,14 @@ struct param {
 };
 
 struct params {
-   Param     *first;
-   Params    *rest;
+    Param     *first;
+    Params    *rest;
 };
 
 struct header {
-   char      *id;
-   Params    *params;
-   int       line_no;
+    char      *id;
+    Params    *params;
+    int       line_no;
 };
 
 struct body {
@@ -281,8 +281,8 @@ struct procs {
 /*----------------------------------------------------------------------
     Definitions for a program. In our case our program is quite
     straightforward, a linked list of procedures but this is where
-    we would add global variables or included files if we were to 
-    extend the language. 
+    we would add global variables or included files if we were to
+    extend the language.
 -----------------------------------------------------------------------*/
 
 struct prog {

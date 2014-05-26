@@ -14,17 +14,17 @@
 
 
 /*----------------------------------------------------------------------
-    Internal structures.  
+    Internal structures.
 -----------------------------------------------------------------------*/
 
 /*----------------------------------------------------------------------
-    Internal function definitions.  
+    Internal function definitions.
 -----------------------------------------------------------------------*/
 // For finding things
 int comp_scope(const void *a, const void *b);
 int comp_symbol(const void *a, const void *b);
-char* print_scope(const void *node);
-char* print_symbol(const void *node);
+char *print_scope(const void *node);
+char *print_symbol(const void *node);
 
 void add_bounds_to_symbol(symbol *sym, Intervals *intvls);
 void add_frames_to_stack(scope *t, int size);
@@ -38,7 +38,7 @@ SymType sym_type_from_ast_type(Type t);
 FUNCTIONS!!!! cOMMENT THIS LATER
 -----------------------------------------------------------------------*/
 
-sym_table*
+sym_table *
 initialize_sym_table() {
     //We need to create a symbol table for scope
     sym_table *prog_sym = (sym_table *) checked_malloc(sizeof(sym_table));
@@ -52,7 +52,7 @@ initialize_sym_table() {
 
 int
 comp_scope(const void *key, const void *b) {
-    if(b == NULL){
+    if (b == NULL) {
         return 0;
     }
 
@@ -60,29 +60,29 @@ comp_scope(const void *key, const void *b) {
     scope *sb = (scope *) b;
     //Compare scope id
     char *id_b = sb->id;
-    return (strcmp(id_a, id_b));    
+    return (strcmp(id_a, id_b));
 }
 
 
 
 int
 comp_symbol(const void *key, const void *b) {
-    if(b == NULL){
+    if (b == NULL) {
         return 0;
     }
     char *id_a = (char *) key;
-    symbol *symb = (symbol *) b;    
+    symbol *symb = (symbol *) b;
 
     //Find the symbol id
     char *id_b = get_symbol_id(symb);
-    return (strcmp(id_a, id_b));    
+    return (strcmp(id_a, id_b));
 }
 
 scope *
 create_scope(void *table, char *scope_id, void *p, int line_no) {
     //First check if the scope exists already
     scope *s = (scope *) bbst_find_node(scope_id, table, comp_scope);
-    if(s != NULL){
+    if (s != NULL) {
         //Already exists
         return NULL;
     }
@@ -101,10 +101,10 @@ BOOL
 insert_symbol(sym_table *prog, symbol *sym, scope *s) {
     //First check if the symbol exists, otherwise insert.
     symbol *exists = retrieve_symbol(get_symbol_id(sym), s->id, prog);
-    if(exists != NULL){
+    if (exists != NULL) {
         //Symbol already exists
         return FALSE;
-    } else {    
+    } else {
         bbst_insert(s->table, get_symbol_id(sym), sym, comp_symbol);
         return TRUE;
     }
@@ -112,7 +112,7 @@ insert_symbol(sym_table *prog, symbol *sym, scope *s) {
 
 char *
 get_symbol_id(symbol *a) {
-    if(a->kind == SYM_LOCAL){
+    if (a->kind == SYM_LOCAL) {
         //Then we have a decl
         Decl *d = (Decl *) a->sym_value;
         return d->id;
@@ -127,17 +127,17 @@ void
 generate_scope(Proc *proc, sym_table *prog) {
     //Create the scope
     char *scope_id = proc->header->id;
-    scope *s = create_scope(prog->table, scope_id, 
-        proc->header->params, proc->header->line_no);
+    scope *s = create_scope(prog->table, scope_id,
+                            proc->header->params, proc->header->line_no);
 
-    if(s != NULL){
+    if (s != NULL) {
         //Now go through and add all the params and internals
         generate_params_symbols(proc->header, s, prog);
         generate_decls_symbols(proc->body->decls, s, prog);
     } else {
         scope *s = find_scope(scope_id, prog);
-        print_dupe_proc_errors(proc, s->params, s->line_no, 
-            proc->header->line_no);
+        print_dupe_proc_errors(proc, s->params, s->line_no,
+                               proc->header->line_no);
 
         setInvalid();
     }
@@ -145,17 +145,17 @@ generate_scope(Proc *proc, sym_table *prog) {
 
 sym_table *
 gen_sym_table(Program *prog) {
-    //We walk through each proc, generating a symbol table for it 
+    //We walk through each proc, generating a symbol table for it
     sym_table *table = initialize_sym_table();
     //Get our procedures and generate each thing
     Procs *procs = prog->procedures;
-    while(procs!=NULL){
+    while (procs != NULL) {
         // Get the current proc
         Proc *current = procs->first;
         // Generate the scope for this proc
         generate_scope(current, table);
         // Continue along
-        procs = procs->rest;    
+        procs = procs->rest;
     }
     //dump_symbol_table(table);
     return table;
@@ -163,7 +163,7 @@ gen_sym_table(Program *prog) {
 
 void
 generate_decls_symbols(Decls *decls, scope *sc, sym_table *prog) {
-    while(decls!=NULL){
+    while (decls != NULL) {
         // Get current param
         Decl *decl = decls->first;
         // Make a symbol
@@ -188,12 +188,12 @@ generate_decls_symbols(Decls *decls, scope *sc, sym_table *prog) {
         }
 
         // Insert the symbol
-        if(!insert_symbol(prog, s, sc)){
-            symbol *orig = retrieve_symbol(get_symbol_id(s), sc->id,prog);
-            print_dupe_symbol_errors(get_symbol_id(s), get_type(orig), 
-                get_type(s), s->line_no, orig->line_no);
-           setInvalid();
-            
+        if (!insert_symbol(prog, s, sc)) {
+            symbol *orig = retrieve_symbol(get_symbol_id(s), sc->id, prog);
+            print_dupe_symbol_errors(get_symbol_id(s), get_type(orig),
+                                     get_type(s), s->line_no, orig->line_no);
+            setInvalid();
+
         }
         //Contine along
         decls = decls->rest;
@@ -252,12 +252,12 @@ generate_params_symbols(Header *h, scope *sc, sym_table *prog) {
     //We go through the params and add a symbol for each one.
     Params *params = h->params;
     int line_no = h->line_no;
-    while(params!=NULL){
+    while (params != NULL) {
         // Get current param
         Param *p = params->first;
         // Make a symbol;
         symbol *s = checked_malloc(sizeof(symbol));
-        if(p->ind == VAL_IND){
+        if (p->ind == VAL_IND) {
             s->kind = SYM_PARAM_VAL;
         } else {
             s->kind = SYM_PARAM_REF;
@@ -269,15 +269,15 @@ generate_params_symbols(Header *h, scope *sc, sym_table *prog) {
         s->line_no = line_no;
 
         // Insert the symbol
-        if(!insert_symbol(prog, s, sc)){
-            symbol *orig = retrieve_symbol(get_symbol_id(s), sc->id,prog);
-            print_dupe_symbol_errors(get_symbol_id(s), get_type(orig), 
-                get_type(s), s->line_no, orig->line_no);
+        if (!insert_symbol(prog, s, sc)) {
+            symbol *orig = retrieve_symbol(get_symbol_id(s), sc->id, prog);
+            print_dupe_symbol_errors(get_symbol_id(s), get_type(orig),
+                                     get_type(s), s->line_no, orig->line_no);
             setInvalid();
         }
         //Contine along
         params = params->rest;
-    }   
+    }
 }
 
 
@@ -286,7 +286,7 @@ retrieve_symbol(char *id, char *scope_id, sym_table *prog) {
     //First find the scope;
     scope *s = bbst_find_node(scope_id, prog->table, comp_scope);
     //If the scope is not null find try find the value, otherwise return null
-    if(s!=NULL){
+    if (s != NULL) {
         return bbst_find_node(id, s->table, comp_symbol);
     } else {
         return NULL;
@@ -296,10 +296,10 @@ retrieve_symbol(char *id, char *scope_id, sym_table *prog) {
 symbol *
 retrieve_symbol_in_scope(char *id, scope *s) {
     //First check if the scope exists, otherwise insert.
-    if(s != NULL){
+    if (s != NULL) {
         symbol *sym = (symbol *) bbst_find_node(id, s->table, comp_symbol);
-        return sym;     
-    } else {    
+        return sym;
+    } else {
         return NULL;
     }
 }
@@ -322,10 +322,10 @@ map_print_symbol(const void *node) {
     //Each node is a scope
     scope *s = (scope *) node;
     //Print the title
-    fprintf(stderr,"Now printing the symbol tree for %s\n", s->id);
+    fprintf(stderr, "Now printing the symbol tree for %s\n", s->id);
     bbst_dump_it(s->table, 0, print_symbol);
     //Print whitespace
-    fprintf(stderr,"\n\n");
+    fprintf(stderr, "\n\n");
 }
 
 char *
@@ -338,9 +338,9 @@ print_symbol(const void *node) {
 void
 dump_symbol_table(sym_table *prog) {
     //First print the scope tree
-    fprintf(stderr,"The scope tree is as follows: \n");
+    fprintf(stderr, "The scope tree is as follows: \n");
     bbst_dump_it(prog->table, 0, print_scope);
-    fprintf(stderr,"\n\n");
+    fprintf(stderr, "\n\n");
     //Now print each symbol tree for each scope
     bbst_map(prog->table, map_print_symbol);
 }
@@ -387,7 +387,7 @@ Type
 get_type(symbol *sym) {
     // Find the second type
     sym->used = TRUE;
-    if(sym->kind == SYM_PARAM_VAL || sym->kind == SYM_PARAM_REF){
+    if (sym->kind == SYM_PARAM_VAL || sym->kind == SYM_PARAM_REF) {
         Param *p = (Param *) sym->sym_value;
         return p->type;
     } else {

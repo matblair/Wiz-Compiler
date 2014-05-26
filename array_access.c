@@ -73,13 +73,13 @@ ArrayAccess *get_array_access(Expr *expr, Bounds *array_bounds) {
             //calculate bounds for the dynamic offset (multiply bounds
             //by the offset_coefficient)
             Intervals *dynamic_bounds_node = create_dbounds_node(lower,
-                    upper, offset_coefficient);
+                                             upper, offset_coefficient);
             //append node at end of list
             if (dynamic_bounds == NULL) {
                 //this means it is first node of the list
                 dynamic_bounds = dynamic_bounds_node;
                 tmp_i = dynamic_bounds; //pointer we keep to end of list for
-                                        //appending
+                //appending
             } else {
                 tmp_i->rest = dynamic_bounds_node;
                 tmp_i = tmp_i->rest;
@@ -88,7 +88,7 @@ ArrayAccess *get_array_access(Expr *expr, Bounds *array_bounds) {
             //calculate and reduce the expression for calculating the
             //dynamic offset
             Exprs *dynamic_offsets_node = create_doffsets_node(next_index,
-                    offset_coefficient, lower);
+                                          offset_coefficient, lower);
             //append node at end of list
             if (dynamic_offsets == NULL) {
                 //this means it is first node of list
@@ -106,17 +106,17 @@ ArrayAccess *get_array_access(Expr *expr, Bounds *array_bounds) {
 
     //finally put the pieces together and return the ArrayAccess pointer
     ArrayAccess *array_access
-        = (ArrayAccess*) checked_malloc(sizeof(ArrayAccess));
+        = (ArrayAccess *) checked_malloc(sizeof(ArrayAccess));
     array_access->static_offset = static_offset;
     array_access->is_in_static_bounds = is_in_static_bounds;
     array_access->dynamic_offsets = dynamic_offsets;
     array_access->dynamic_bounds = dynamic_bounds;
     return array_access;
 }
-                    
 
 
-    
+
+
 /*-----------------------------------------------------------------------
     creates a new node for the dynamic bounds list, given the argument
     lower and upper bounds, and the given offset coefficient
@@ -124,9 +124,9 @@ ArrayAccess *get_array_access(Expr *expr, Bounds *array_bounds) {
 -----------------------------------------------------------------------*/
 Intervals *create_dbounds_node(int lower, int upper, int offset_coefficient) {
     Interval *offset_bounds
-        = (Interval*) checked_malloc(sizeof(Interval));
-    Intervals *dynamic_bounds_node 
-        = (Intervals*) checked_malloc(sizeof(Intervals));
+        = (Interval *) checked_malloc(sizeof(Interval));
+    Intervals *dynamic_bounds_node
+        = (Intervals *) checked_malloc(sizeof(Intervals));
     //take into account that offset has lower bound subtracted, then entire
     //number is multiplied by coefficient
     //so we must perform the same operation to the bounds to make the array
@@ -145,13 +145,13 @@ Intervals *create_dbounds_node(int lower, int upper, int offset_coefficient) {
     to this node
 -----------------------------------------------------------------------*/
 Exprs *create_doffsets_node(Expr *index_e, int offset_coefficient, int lower) {
-    Expr *e1 = (Expr*) checked_malloc(sizeof(Expr));
-    Expr *e2 = (Expr*) checked_malloc(sizeof(Expr));
-    Expr *e_offset = (Expr*) checked_malloc(sizeof(Expr));
-    Exprs *dynamic_offset_node = (Exprs*) checked_malloc(sizeof(Exprs));
+    Expr *e1 = (Expr *) checked_malloc(sizeof(Expr));
+    Expr *e2 = (Expr *) checked_malloc(sizeof(Expr));
+    Expr *e_offset = (Expr *) checked_malloc(sizeof(Expr));
+    Exprs *dynamic_offset_node = (Exprs *) checked_malloc(sizeof(Exprs));
 
     //create a BINOP expression, of the form:
-    // (index - lower) * offset_coefficient 
+    // (index - lower) * offset_coefficient
 
     //create the LHS expression first
     e1->kind = EXPR_BINOP;
@@ -160,7 +160,7 @@ Exprs *create_doffsets_node(Expr *index_e, int offset_coefficient, int lower) {
     //link the index expression for sub expression 1
     e1->e1 = index_e;
     //create a constant node for sub expression 2
-    e1->e2 = (Expr*) checked_malloc(sizeof(Expr));
+    e1->e2 = (Expr *) checked_malloc(sizeof(Expr));
     e1->e2->kind = EXPR_CONST;
     e1->e2->lineno = index_e->lineno;
     e1->e2->constant.type = INT_TYPE;

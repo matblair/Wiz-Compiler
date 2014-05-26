@@ -148,7 +148,7 @@ gen_oz_params(OzProgram *p, Params *params, void *table) {
     int count = 0;
     while (params != NULL) {
         param = params->first;
-        sym = retrieve_symbol_in_scope(param->id,(scope *)table);
+        sym = retrieve_symbol_in_scope(param->id, (scope *)table);
 
         gen_binop(p, OP_STORE, sym->slot, count);
 
@@ -175,7 +175,7 @@ gen_oz_decls(OzProgram *p, Decls *decls, void *table) {
         decl = ds->first;
 
         sym = retrieve_symbol_in_scope(decl->id, (scope *)table);
-        
+
         if (!reals && sym->type == SYM_REAL) {
             reals = TRUE;
             real_reg = count++;
@@ -212,7 +212,7 @@ gen_oz_decls(OzProgram *p, Decls *decls, void *table) {
 
         // if not array, just do one, otherwise initalise all stack vars
         if (sym->bounds == NULL) {
-             gen_binop(p, OP_STORE, sym->slot, reg);
+            gen_binop(p, OP_STORE, sym->slot, reg);
         } else {
             gen_oz_init_array(p, sym->slot, reg, sym->bounds);
         }
@@ -280,7 +280,7 @@ gen_oz_stmts(OzProgram *p, Stmts *stmts, void *tables, void *table) {
 
     Stmt *stmt = stmts->first;
 
-    switch(stmt->kind) {
+    switch (stmt->kind) {
         case STMT_WRITE:
             gen_oz_write(p, stmt->info.write, table);
             break;
@@ -317,7 +317,7 @@ gen_oz_write(OzProgram *p, Expr *write, void *table) {
     gen_comment(p, SECTION_WRITE);
 
     gen_oz_expr(p, 0, write, table);
-    switch(write->inferred_type) {
+    switch (write->inferred_type) {
         case BOOL_TYPE:
             gen_call_builtin(p, BUILTIN_PRINT_BOOL);
             break;
@@ -345,7 +345,7 @@ gen_oz_read(OzProgram *p, Expr *read, void *table) {
 
     symbol *sym = retrieve_symbol_in_scope(read->id, table);
 
-    switch(sym->type) {
+    switch (sym->type) {
         case SYM_BOOL:
             gen_call_builtin(p, BUILTIN_READ_BOOL);
             break;
@@ -372,12 +372,10 @@ gen_oz_read(OzProgram *p, Expr *read, void *table) {
             gen_oz_expr_array_addr(p, 1, read, table);
             gen_binop(p, OP_STORE_INDIRECT, 1, 0);
         }
-    }
-    else if (sym->kind == SYM_PARAM_REF) {
+    } else if (sym->kind == SYM_PARAM_REF) {
         gen_binop(p, OP_LOAD, 1, sym->slot);
         gen_binop(p, OP_STORE_INDIRECT, 1, 0);
-    }
-    else {
+    } else {
         gen_binop(p, OP_STORE, sym->slot, 0);
     }
 }
@@ -398,7 +396,7 @@ gen_oz_assign(OzProgram *p, Assign *assign, void *table) {
     }
 
     // Store the value
-    if (assign->asg_ident->kind == EXPR_ARRAY){
+    if (assign->asg_ident->kind == EXPR_ARRAY) {
         //if array access is entirely static, store directly
         Bounds *bounds = sym->bounds;
         ArrayAccess *array_access = get_array_access(assign->asg_ident, bounds);
@@ -408,12 +406,10 @@ gen_oz_assign(OzProgram *p, Assign *assign, void *table) {
             gen_oz_expr_array_addr(p, 1, assign->asg_ident, table);
             gen_binop(p, OP_STORE_INDIRECT, 1, 0);
         }
-    }
-    else if (sym->kind == SYM_PARAM_REF) {
+    } else if (sym->kind == SYM_PARAM_REF) {
         gen_binop(p, OP_LOAD, 1, sym->slot);
         gen_binop(p, OP_STORE_INDIRECT, 1, 0);
-    }
-    else {
+    } else {
         gen_binop(p, OP_STORE, sym->slot, 0);
     }
 }
@@ -441,22 +437,19 @@ gen_oz_call(OzProgram *p, Function *call, void *tables, void *table) {
 
             if (arg_sym->kind == SYM_PARAM_REF) {
                 gen_binop(p, OP_LOAD, reg, arg_sym->slot);
-            }
-            else if (arg->kind == EXPR_ARRAY) {
+            } else if (arg->kind == EXPR_ARRAY) {
                 gen_oz_expr_array_addr(p, reg, arg, table);
-            }
-            else {
+            } else {
                 gen_binop(p, OP_LOAD_ADDRESS, reg, arg_sym->slot);
-            }    
-        }
-        else {
+            }
+        } else {
             gen_oz_expr(p, reg, arg, table);
             // are we passing an int value to a float param?
             if (arg->inferred_type == INT_TYPE && param->type == FLOAT_TYPE) {
                 gen_binop(p, OP_INT_TO_REAL, reg, reg);
             }
         }
-        
+
         // other args
         reg++;
         params = params->rest;
@@ -484,7 +477,7 @@ gen_oz_cond(OzProgram *p, Cond *cond, void *tables, void *table) {
     gen_binop(p, OP_BRANCH_ON_FALSE, 0, else_branch ? else_label : after_label);
 
     gen_oz_stmts(p, cond->then_branch, tables, table); // then body
-    
+
     if (else_branch) {
         gen_unop(p, OP_BRANCH_UNCOND, after_label);
         gen_label(p, else_label);
@@ -516,7 +509,7 @@ gen_oz_while(OzProgram *p, While *loop, void *tables, void *table) {
 
 void
 gen_oz_expr(OzProgram *p, int reg, Expr *expr, void *table) {
-    switch(expr->kind) {
+    switch (expr->kind) {
         case EXPR_ID:
             gen_oz_expr_id(p, reg, expr->id, table);
             break;
@@ -552,8 +545,7 @@ gen_oz_expr_id(OzProgram *p, int reg, char *id, void *table) {
         gen_binop(p, OP_LOAD, reg, sym->slot);
         //then load indirectly using this address
         gen_binop(p, OP_LOAD_INDIRECT, reg, reg);
-    }
-    else {
+    } else {
         gen_binop(p, OP_LOAD, reg, sym->slot);
     }
 }
@@ -562,7 +554,7 @@ void
 gen_oz_expr_const(OzProgram *p, int reg, Constant *constant) {
     Value *val = &(constant->val);
 
-    switch(constant->type) {
+    switch (constant->type) {
         case BOOL_TYPE:
             gen_int_const(p, reg, val->bool_val);
             break;
@@ -609,7 +601,7 @@ gen_oz_expr_array_addr(OzProgram *p, int reg, Expr *a, void *table) {
     Intervals *dynamic_bounds = array_access->dynamic_bounds;
 
     // default to static offset
-    gen_int_const(p, reg, array_access->static_offset); 
+    gen_int_const(p, reg, array_access->static_offset);
 
     // check if we are in static bounds, if not create jump to out of bounds
     // and do no more compilation for this access
@@ -621,7 +613,7 @@ gen_oz_expr_array_addr(OzProgram *p, int reg, Expr *a, void *table) {
     // calculate the dynamic offsets we want to apply, iteratively adding
     // them to the total offset, and doing dynamic bounds checking for
     // each dynamic offset
-    while(dynamic_offsets != NULL) {
+    while (dynamic_offsets != NULL) {
         Expr *dynamic_offset = dynamic_offsets->first;
         Interval *bounds = dynamic_bounds->first;
         // calculate the dynamic offset:
@@ -668,11 +660,11 @@ gen_oz_expr_binop(OzProgram *p, int reg, Expr *expr, void *table) {
     int expr1_reg, expr2_reg;
     if (reg_usage_1 >= reg_usage_2) {
         expr1_reg = reg;
-        expr2_reg = reg+1;
+        expr2_reg = reg + 1;
         gen_oz_expr(p, reg, expr->e1, table);
         gen_oz_expr(p, reg + 1, expr->e2, table);
     } else {
-        expr1_reg = reg+1;
+        expr1_reg = reg + 1;
         expr2_reg = reg;
         gen_oz_expr(p, reg, expr->e2, table);
         gen_oz_expr(p, reg + 1, expr->e1, table);
@@ -693,16 +685,14 @@ gen_oz_expr_binop(OzProgram *p, int reg, Expr *expr, void *table) {
     // deal with operations with both int and float
     if (e1type == INT_TYPE && e2type == FLOAT_TYPE) {
         gen_binop(p, OP_INT_TO_REAL, expr1_reg, expr1_reg);
-    }
-    else if (e1type == FLOAT_TYPE && e2type == INT_TYPE) {
+    } else if (e1type == FLOAT_TYPE && e2type == INT_TYPE) {
         gen_binop(p, OP_INT_TO_REAL, expr2_reg, expr2_reg);
     }
 
     // generate the code
     if (e1type == BOOL_TYPE && e2type == BOOL_TYPE) {
         gen_oz_expr_binop_bool(p, reg, expr1_reg, expr2_reg, expr);
-    }
-    else if (e1type == FLOAT_TYPE || e2type == FLOAT_TYPE) {
+    } else if (e1type == FLOAT_TYPE || e2type == FLOAT_TYPE) {
         gen_oz_expr_binop_float(p, reg, expr1_reg, expr2_reg, expr);
 
     } else {
@@ -712,7 +702,7 @@ gen_oz_expr_binop(OzProgram *p, int reg, Expr *expr, void *table) {
 
 void
 gen_oz_expr_binop_bool(OzProgram *p, int r1, int r2, int r3, Expr *expr) {
-    switch(expr->binop) {
+    switch (expr->binop) {
         case BINOP_OR:
             gen_triop(p, OP_OR, r1, r2, r3);
             break;
@@ -722,7 +712,7 @@ gen_oz_expr_binop_bool(OzProgram *p, int r1, int r2, int r3, Expr *expr) {
             break;
 
         default:
-            print_expression(stderr, expr,0);
+            print_expression(stderr, expr, 0);
 
             report_error_and_exit("invalid op for bool binop expr!");
     }
@@ -730,7 +720,7 @@ gen_oz_expr_binop_bool(OzProgram *p, int r1, int r2, int r3, Expr *expr) {
 
 void
 gen_oz_expr_binop_int(OzProgram *p, int r1, int r2, int r3, Expr *expr) {
-    switch(expr->binop) {
+    switch (expr->binop) {
         case BINOP_ADD:
             gen_triop(p, OP_ADD_INT, r1, r2, r3);
             break;
@@ -778,7 +768,7 @@ gen_oz_expr_binop_int(OzProgram *p, int r1, int r2, int r3, Expr *expr) {
 
 void
 gen_oz_expr_binop_float(OzProgram *p, int r1, int r2, int r3, Expr *expr) {
-    switch(expr->binop) {
+    switch (expr->binop) {
         case BINOP_ADD:
             gen_triop(p, OP_ADD_REAL, r1, r2, r3);
             break;
@@ -829,7 +819,7 @@ gen_oz_expr_unop(OzProgram *p, int reg, Expr *expr, void *table) {
     Type t = expr->inferred_type;
 
     // Eval sub expression
-    gen_oz_expr(p,reg, expr->e1, table);
+    gen_oz_expr(p, reg, expr->e1, table);
 
     // Do we need to worry about converting float to int?
     if (t == FLOAT_TYPE && expr->e1->inferred_type == INT_TYPE) {
@@ -852,7 +842,7 @@ gen_oz_expr_unop(OzProgram *p, int reg, Expr *expr, void *table) {
     }
 
     else {
-        fprintf(stderr,"Type is %s for %s\n", typenames[t], expr->id);
+        fprintf(stderr, "Type is %s for %s\n", typenames[t], expr->id);
         report_error_and_exit("invalid op for unop expr!");
     }
 }
@@ -872,7 +862,7 @@ get_reg_usage(Expr *expr, void *table) {
     ArrayAccess *array_access;
     Exprs *exprs;
     // Switch based on expression kind
-    switch(expr->kind) {
+    switch (expr->kind) {
         case EXPR_ID:
         case EXPR_CONST:
             // no exra registers needed in these cases
@@ -888,7 +878,7 @@ get_reg_usage(Expr *expr, void *table) {
             reg_usage_2 = get_reg_usage(expr->e2, table);
             min_count = min(reg_usage_1, reg_usage_2);
             max_count = max(reg_usage_1, reg_usage_2);
-            reg_usage_total = max(max_count, min_count+1);
+            reg_usage_total = max(max_count, min_count + 1);
             // if the binop expression is DIV, need at least one extra
             // register for comparison of RHS to zero
             if (expr->binop == BINOP_DIV) {
@@ -926,14 +916,14 @@ get_reg_usage(Expr *expr, void *table) {
                     // result, and in addition uses at least one additional
                     // register for bounds checking
                     reg_usage_1 = max(get_reg_usage(exprs->first,
-                                table) + 1, 2);
+                                                    table) + 1, 2);
                     reg_usage_total = max(reg_usage_1, reg_usage_total);
                     exprs = exprs->rest;
                 }
                 return reg_usage_total;
             }
             break;
-                
+
         default:
             report_error_and_exit("unknown expr type!");
     }
@@ -954,8 +944,7 @@ new_line(OzProgram *p) {
     if (p->start == NULL) {
         p->start = lines;
         p->end = lines;
-    }
-    else {
+    } else {
         p->end->rest = lines;
         p->end = lines;
     }

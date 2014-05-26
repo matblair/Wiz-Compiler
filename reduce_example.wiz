@@ -20,4 +20,5 @@ proc main()
     write not (not ((not a) and (not b))) and not (not (not c)) and not false;
     write not (not ((not a) and (not b))) and not (not (not c)) and not true;
     write x + y;
+    write a[1];
 end

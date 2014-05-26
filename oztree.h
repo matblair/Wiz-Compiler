@@ -24,7 +24,7 @@ typedef enum {
     OP_ADD_INT, OP_ADD_REAL, OP_ADD_OFFSET,
     OP_SUB_INT, OP_SUB_REAL, OP_SUB_OFFSET,
     OP_MUL_INT, OP_MUL_REAL, OP_DIV_INT, OP_DIV_REAL,
-    
+
     // Comparison ops
     OP_CMP_EQ_INT,  OP_CMP_NE_INT,  OP_CMP_GT_INT,  OP_CMP_GE_INT,
     OP_CMP_LT_INT,  OP_CMP_LE_INT,  OP_CMP_EQ_REAL, OP_CMP_NE_REAL,
@@ -51,7 +51,7 @@ typedef enum {
 } OzCommentSection;
 
 #define COMMENTSTRS "prologue", "write", "read", "assignment", "if",\
-                    "while", "proc call", "epilogue"
+    "while", "proc call", "epilogue"
 
 extern const char *sectionnames[];
 
@@ -65,8 +65,8 @@ typedef enum {
 } OzBuiltinId;
 
 #define BUILTINNAMES "read_int",  "read_real",  "read_bool",\
-                     "print_int", "print_real", "print_bool",\
-                     "print_string"
+    "print_int", "print_real", "print_bool",\
+    "print_string"
 
 extern const char *builtinnames[];
 

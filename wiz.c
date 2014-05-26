@@ -57,29 +57,30 @@ main(int argc, char **argv) {
         exit(EXIT_FAILURE);
     }
 
-    if (argc == 2)
+    if (argc == 2) {
         in_filename = argv[1];
+    }
 
-    if (argc == 3 && streq(argv[1],"-p")) {
+    if (argc == 3 && streq(argv[1], "-p")) {
         pretty_print_only = TRUE;
         in_filename = argv[2];
     }
-    if (argc == 3 && streq(argv[1],"-c")) {
+    if (argc == 3 && streq(argv[1], "-c")) {
         analyse_optimise_print = TRUE;
         in_filename = argv[2];
     }
 
-    if (argc == 3 && streq(argv[1],"-o")) {
+    if (argc == 3 && streq(argv[1], "-o")) {
         optimise = TRUE;
         in_filename = argv[2];
     }
 
-    if (argc == 3 && streq(argv[1],"-f")) {
+    if (argc == 3 && streq(argv[1], "-f")) {
         to_file = TRUE;
         in_filename = argv[2];
     }
 
-    
+
     yyin = fopen(in_filename, "r");
     if (yyin == NULL) {
         perror(in_filename);
@@ -108,18 +109,18 @@ main(int argc, char **argv) {
     }
 
     //Standard compilation
-    if(optimise){
+    if (optimise) {
         reduce_ast(parsed_program);
-    } else if(to_file){
+    } else if (to_file) {
         reduce_ast(parsed_program);
-        char *outfile = checked_malloc((strlen(in_filename)+1)*sizeof(char));
-        strncpy(outfile, in_filename, strlen(in_filename)-3);
-       
+        char *outfile = checked_malloc((strlen(in_filename) + 1) * sizeof(char));
+        strncpy(outfile, in_filename, strlen(in_filename) - 3);
+
         char *ending = "oz";
         strcat(outfile, ending);
 
-        printf("%s\n",outfile);
-        fp = fopen(outfile,"w");
+        printf("%s\n", outfile);
+        fp = fopen(outfile, "w");
     }
 
     compile(fp, parsed_program);
@@ -130,7 +131,11 @@ main(int argc, char **argv) {
 
 static void
 usage(void) {
-    printf("usage: wiz [-p] iz_source_file\n");
+    printf("usage: wiz [-p|-o|-c|-f] iz_source_file\n");
+    printf("\t -f : compile with optimisation and output to the filename.oz\n");
+    printf("\t -c : optimise and reduce expressions, printing the before \n");
+    printf("\t      after results along with any errors.\n");
+    printf("\t -o : compile with optimisation and output to stdout.\n\n");
 }
 
 /*---------------------------------------------------------------------*/
