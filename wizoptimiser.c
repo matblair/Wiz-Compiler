@@ -311,10 +311,6 @@ Expr *reduce_binop(Expr *e) {
     new_expr->kind = EXPR_CONST;
     new_expr->lineno = e->lineno;
 
-    //free the sub-expressions and previous expression, and return new
-    free(e->e1);
-    free(e->e2);
-    free(e);
     return new_expr;
 }
 
@@ -403,7 +399,6 @@ Expr *reduce_commutative_multiop(Expr *e) {
             //advance term_list
             old = term_list;
             term_list = term_list->rest;
-            free(old);
         } else {
             //otherwise we can't reduce this expression, so append it to
             //either positive or negative list
@@ -423,7 +418,6 @@ Expr *reduce_commutative_multiop(Expr *e) {
                 neg_list->rest = NULL;
                 //prune the negative unary node from the neg_list entry
                 neg_list->first = next_e->e1;
-                free(next_e);
             } else {
                 //otherwise append list node to the positive list
                 if (pos_list == NULL) {
@@ -499,11 +493,8 @@ Expr *reduce_commutative_multiop(Expr *e) {
         //optimize and change to SUB)
         if (reduced_expr->kind == EXPR_UNOP
                 && reduced_expr->unop == UNOP_MINUS && std_op == BINOP_ADD) {
-            Expr *tmp = reduced_expr;
             reduced_expr = generate_binop_node(BINOP_SUB, const_node,
                                                reduced_expr->e1, e->lineno);
-            //free the now redundant unop node
-            free(tmp);
         } else {
             reduced_expr = generate_binop_node(std_op,
                                                reduced_expr, const_node, e->lineno);
@@ -609,8 +600,6 @@ Exprs *linearize_expression(Expr *e, BinOp std_op, BinOp inv_op, int num_inv) {
         }
         //linearise RHS sub-expression and append
         tmp_list->rest = linearize_expression(e->e2, std_op, inv_op, num_inv);
-        //free memory that was used for holding this (now redundant) node
-        free(e);
     } else if (e->kind == EXPR_BINOP && e->binop == inv_op) {
         //same as previous case, but number of inversions is increased by
         //one for RHS sub-expression
@@ -620,7 +609,6 @@ Exprs *linearize_expression(Expr *e, BinOp std_op, BinOp inv_op, int num_inv) {
             tmp_list = tmp_list->rest;
         }
         tmp_list->rest = linearize_expression(e->e2, std_op, inv_op, num_inv + 1);
-        free(e);
     } else {
         //in any other case the expression is a single term, so reduce
         //and continue linearizing if possible (the reduction
@@ -682,20 +670,17 @@ Expr *reduce_unop(Expr *e, BOOL recursive) {
             if (e1->kind == EXPR_BINOP && e1->binop == BINOP_ADD) {
                 //reduce -(a+b) to (-a)-b
                 e1->binop = BINOP_SUB;
-                free(e);
                 //place minus around left sub expression
                 e1->e1 = generate_unop_node(UNOP_MINUS, e1->e1, e1->lineno);
                 e_shallow_reduced = e1;
             } else if (e1->kind == EXPR_BINOP && e1->binop == BINOP_SUB) {
                 //reduce -(a-b) to (-a)+b
                 e1->binop = BINOP_ADD;
-                free(e);
                 //place minus around left sub expression
                 e1->e1 = generate_unop_node(UNOP_MINUS, e1->e1, e1->lineno);
                 e_shallow_reduced = e1;
             } else if (e1->kind == EXPR_BINOP && e1->binop == BINOP_MUL) {
                 //reduce -(a*b) to (-a)*(-b)
-                free(e);
                 //place minus around each sub expression
                 e1->e1 = generate_unop_node(UNOP_MINUS, e1->e1, e1->lineno);
                 e1->e2 = generate_unop_node(UNOP_MINUS, e1->e2, e1->lineno);
@@ -706,8 +691,6 @@ Expr *reduce_unop(Expr *e, BOOL recursive) {
             else if (e1->kind == EXPR_UNOP && e1->unop == UNOP_MINUS) {
                 //double negation, remove
                 Expr *e1e1 = e1->e1;
-                free(e);
-                free(e1);
                 //greedily continue reducing extra unary nodes with same
                 //recursivity
                 if (e1e1->kind == EXPR_UNOP && e1e1->unop == UNOP_MINUS) {
@@ -748,7 +731,6 @@ Expr *reduce_unop(Expr *e, BOOL recursive) {
                     new_expr->constant.val.int_val = -(c->val.int_val);
                 }
 
-                free(e);
                 return new_expr;
             }
             return e;
@@ -759,7 +741,6 @@ Expr *reduce_unop(Expr *e, BOOL recursive) {
             if (e1->kind == EXPR_BINOP && e1->binop == BINOP_AND) {
                 //reduces sub expression to an OR (De Morgan's Law)
                 e1->binop = BINOP_OR;
-                free(e);
                 //place NOT around sub-expressions
                 e1->e1 = generate_unop_node(UNOP_NOT, e1->e1, e1->lineno);
                 e1->e2 = generate_unop_node(UNOP_NOT, e1->e2, e1->lineno);
@@ -767,7 +748,6 @@ Expr *reduce_unop(Expr *e, BOOL recursive) {
             } else if (e1->kind == EXPR_BINOP && e1->binop == BINOP_OR) {
                 //reduces sub expression to an AND (De Morgan's Law)
                 e1->binop = BINOP_AND;
-                free(e);
                 //place NOT around sub-expressions
                 Expr *e1e1 = generate_unop_node(UNOP_NOT, e1->e1, e1->lineno);
                 e1->e1 = e1e1;
@@ -777,28 +757,22 @@ Expr *reduce_unop(Expr *e, BOOL recursive) {
             } else if (e1->kind == EXPR_BINOP && e1->binop == BINOP_GT) {
                 //reduces sub expression to a LTEQ
                 e1->binop = BINOP_LTEQ;
-                free(e);
                 e_shallow_reduced = e1;
             } else if (e1->kind == EXPR_BINOP && e1->binop == BINOP_LT) {
                 //reduces sub expression to a GTEQ
                 e1->binop = BINOP_GTEQ;
-                free(e);
                 e_shallow_reduced = e1;
             } else if (e1->kind == EXPR_BINOP && e1->binop == BINOP_GTEQ) {
                 //reduces sub expression to a LT
                 e1->binop = BINOP_LT;
-                free(e);
                 e_shallow_reduced = e1;
             } else if (e1->kind == EXPR_BINOP && e1->binop == BINOP_LTEQ) {
                 //reduces sub expression to a GT
                 e1->binop = BINOP_GT;
-                free(e);
                 e_shallow_reduced = e1;
             } else if (e1->kind == EXPR_UNOP && e1->unop == UNOP_NOT) {
                 //remove double negative, and continue if any remain
                 Expr *e1e1 = e1->e1;
-                free(e);
-                free(e1);
                 //greedily continue reducing extra unary nodes with same
                 //recursivity
                 if (e1e1->kind == EXPR_UNOP && e1e1->unop == UNOP_NOT) {
@@ -831,7 +805,6 @@ Expr *reduce_unop(Expr *e, BOOL recursive) {
                 //Then return new constant.
                 new_expr->constant.type = BOOL_TYPE;
                 new_expr->constant.val.bool_val = !(c->val.bool_val);
-                free(e);
                 return new_expr;
             }
             return e;
