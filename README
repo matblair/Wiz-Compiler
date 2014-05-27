@@ -140,7 +140,18 @@ error message and halts if it encounters such a violation (these checks are
 performed in an optimized way in the spirit of the above array optimization).
 
 
+/*-----------------------------------------------------------------------
+	Important Note
+-----------------------------------------------------------------------*/
+Our compiler will optimise by default, because of this (and the variable
+precision implied by reading floats etc) there may be small rounding errors
+due to the decrease in operations (or ordering) that we apply to constant
+expressions. This may cause testing scripts to fail, but you will note that 
+these issues generally only occur at 8 or more decimal places.
 
+Further,our error printing uses ascii colours that will appear as gibberish
+characters when printed to file. To view this correctly, simply open the file
+in any editor that supports these ascii escaped characters (i.e. a terminal).
 
 
 Please contact any of the group members should you have any additional
