@@ -15,6 +15,7 @@
 #define EXTRA 10
 #define INITAL_LEVEL 0
 
+// A node for our bbst. Has void types for the node
 typedef struct node {
     void *current;
     struct node *left;
@@ -22,6 +23,7 @@ typedef struct node {
     int level;
 } t_node;
 
+// Parnet child structure for balancing purposes.
 typedef struct parentchild {
     t_node *parent; // pointer to parent node of node of interest
     int which;  // tells us whether it is a left or right child
@@ -125,7 +127,6 @@ bbst_insert(void *search, void *key, void *value,
 
 // Performs a simple skew operation on the given node pointer.
 // After checking that it is safe to do so
-
 t_node *skew(t_node *root) {
     // Ensure we're not trying to skew at the end of the tree, and that a
     // skew isactually needed

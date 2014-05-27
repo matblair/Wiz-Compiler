@@ -3,7 +3,8 @@
 /*-----------------------------------------------------------------------
     Developed by: #undef TEAMNAME
     Provides a series of optimisation functions that allow for the
-    reduction and optimisation of wiz syntax trees and opcode trees
+    reduction and optimisation of wiz syntax trees (provides constant
+    folding, and algebraic re-arrangements / simplifications)
 -----------------------------------------------------------------------*/
 #include <string.h>
 #include <stdlib.h>
@@ -11,10 +12,6 @@
 #include "bbst.h"
 #include "helper.h"
 #include "wizoptimiser.h"
-
-/*----------------------------------------------------------------------
-    Internal structures.
------------------------------------------------------------------------*/
 
 /*----------------------------------------------------------------------
     Internal function definitions.
@@ -32,10 +29,10 @@ Exprs *linearize_expression(Expr *e, BinOp std_op, BinOp inv_op, int num_inv);
 Expr *reduce_unop(Expr *e, BOOL recursive);
 Expr *generate_unop_node(UnOp op, Expr *e1, int lineno);
 
-/*----------------------------------------------------------------------
-FUNCTIONS!!!! cOMMENT THIS LATER
------------------------------------------------------------------------*/
-
+/*----------------------------------------------------------------------------
+    Calls the reduction procedure on entire program (this provides interface
+    between this module with other modules that use it)
+----------------------------------------------------------------------------*/
 Program *reduce_ast(Program *prog) {
     //We want to go through each expression and remove any constant expressions
     //recursively.
@@ -95,17 +92,32 @@ void reduce_statements(Stmts *statements) {
     }
 }
 
+
+/*----------------------------------------------------------------------------
+    reduces an assignment expression by recursively reducing its
+    components
+----------------------------------------------------------------------------*/
 void reduce_assigment(Assign *a) {
     a->asg_ident = reduce_expression(a->asg_ident);
     a->asg_expr = reduce_expression(a->asg_expr);
 }
 
+
+/*----------------------------------------------------------------------------
+    reduces a conditional statement by recursively reducing its
+    componenents
+----------------------------------------------------------------------------*/
 void reduce_if(Cond *c) {
     c->cond = reduce_expression(c->cond);
     reduce_statements(c->then_branch);
     reduce_statements(c->else_branch);
 }
 
+
+/*----------------------------------------------------------------------------
+    reduces a generic expression by transfering control to specific
+    reduction function based on expression kind
+----------------------------------------------------------------------------*/
 Expr *reduce_expression(Expr *e) {
     //Find the type of an expression
     ExprKind kind = e->kind;
@@ -141,6 +153,12 @@ Expr *reduce_expression(Expr *e) {
     return e;
 }
 
+
+/*----------------------------------------------------------------------------
+    Reduces a binop expression - deals with commutative multiop expressions
+    separately, and otherwise just reduces if sub-expressions are constant
+    (and thus can be folded together)
+----------------------------------------------------------------------------*/
 Expr *reduce_binop(Expr *e) {
     //Get the type of the binary operation
     BinOp b = e->binop;
@@ -301,10 +319,10 @@ Expr *reduce_binop(Expr *e) {
 }
 
 
-/*-----------------------------------------------------------------------
+/*----------------------------------------------------------------------------
     reduces a multi-op expression involving some commutative operator
     (in case of - expressions view these as +)
------------------------------------------------------------------------*/
+----------------------------------------------------------------------------*/
 Expr *reduce_commutative_multiop(Expr *e) {
     BinOp b = e->binop;
     BinOp std_op, inv_op;
@@ -496,11 +514,11 @@ Expr *reduce_commutative_multiop(Expr *e) {
 }
 
 
-/*-----------------------------------------------------------------------
+/*----------------------------------------------------------------------------
     creates a new binary op expression, with operation op, sub-expressions
     e1 and e2, and given lineno
     - returns pointer to this new expression
------------------------------------------------------------------------*/
+----------------------------------------------------------------------------*/
 Expr *generate_binop_node(BinOp op, Expr *e1, Expr *e2, int lineno) {
     Expr *node = (Expr *) checked_malloc(sizeof(Expr));
     node->lineno = lineno;
@@ -513,10 +531,10 @@ Expr *generate_binop_node(BinOp op, Expr *e1, Expr *e2, int lineno) {
     return node;
 }
 
-/*-----------------------------------------------------------------------
+/*----------------------------------------------------------------------------
     decides whether the provided expression is identity with respect
     to the given boolean operator (works for ADD, MUL, OR and AND)
------------------------------------------------------------------------*/
+----------------------------------------------------------------------------*/
 BOOL is_identity(Expr *e, BinOp op) {
     if (e->kind == EXPR_CONST) {
         //for ADD, require int type with value 0
@@ -550,10 +568,10 @@ BOOL is_identity(Expr *e, BinOp op) {
 }
 
 
-/*-----------------------------------------------------------------------
+/*----------------------------------------------------------------------------
     folds the expression list given by elist, using the commutative
     operator op, into a left-heavy binary expression tree
------------------------------------------------------------------------*/
+----------------------------------------------------------------------------*/
 Expr *fold_expression_list(Exprs *elist, BinOp op) {
     //trivial cases
     if (elist == NULL) {
@@ -571,14 +589,14 @@ Expr *fold_expression_list(Exprs *elist, BinOp op) {
 }
 
 
-/*-----------------------------------------------------------------------
+/*----------------------------------------------------------------------------
     linearizes the expression, converting it to list of operands of the
     given commutative operator (std_op)
     in the case of addition, we also take into account inversions from
     the subtaction operator (expressions that are inverted an odd number
     of times have unary minus node attached)
     also performs recursive reductions of the individual terms
------------------------------------------------------------------------*/
+----------------------------------------------------------------------------*/
 Exprs *linearize_expression(Expr *e, BinOp std_op, BinOp inv_op, int num_inv) {
     Exprs *e_list = NULL;
     if (e->kind == EXPR_BINOP && e->binop == std_op) {
@@ -646,7 +664,13 @@ Exprs *linearize_expression(Expr *e, BinOp std_op, BinOp inv_op, int num_inv) {
     return e_list;
 }
 
-
+/*----------------------------------------------------------------------------
+    Reduces a unop expression, removing double negatives and expanding over
+    over binary sub-expressions where appropriate. Also folds expression if
+    sub-expression is constant.
+    Finally, if "recursive" is false, only simplify at this level and do
+    not recursively reduce sub-expression
+----------------------------------------------------------------------------*/
 Expr *reduce_unop(Expr *e, BOOL recursive) {
     UnOp u = e->unop;
     Expr *e1 = e->e1;
@@ -815,6 +839,12 @@ Expr *reduce_unop(Expr *e, BOOL recursive) {
     return e;
 }
 
+
+/*----------------------------------------------------------------------------
+    Creates and allocates memory for an expression node holding a unary
+    expression (with operator given by op and subexpression by e1)
+    - returns a pointer to this expression
+----------------------------------------------------------------------------*/
 Expr *generate_unop_node(UnOp op, Expr *e1, int lineno) {
     Expr *node = (Expr *) checked_malloc(sizeof(Expr));
     node->kind = EXPR_UNOP;

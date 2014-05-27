@@ -23,7 +23,7 @@
 void check_main(sym_table *table);
 void analyse_statements(Stmts *statements, sym_table *table, char *scope_id);
 
-//For analysing thing
+//For analysing statements
 void analyse_assign(Assign *cond, sym_table *table,
                     char *scope_id, int line_no);
 void analyse_if(Cond *cond, sym_table *table, char *scope_id, int line_no);
@@ -51,7 +51,7 @@ Type get_unop_type(Type t, UnOp u, int line_no, Expr *e);
 BOOL validate_array_dims(Expr *e, char *scope_id,
                          sym_table *table, int line_no);
 void validate_array_indices(Exprs *indices, char *id,
-                            int line_no, sym_table *table, char *scope_id, symbol *array_sym);
+            int line_no, sym_table *table, char *scope_id, symbol *array_sym);
 
 
 //Whether we succeed or not.
@@ -328,8 +328,8 @@ Type get_expr_type(Expr *e, Expr *parent,
             //We need the types of each expression
             //Then we determine the type if allowed using the binop
             return get_binop_type(get_expr_type(e->e1, e, table, scope_id,
-                                                line_no), get_expr_type(e->e2, e, table, scope_id, line_no),
-                                  e->binop, line_no, e);
+                line_no), get_expr_type(e->e2, e, table, scope_id, line_no),
+                e->binop, line_no, e);
             break;
         case EXPR_UNOP:
             //Get the type of the expression
@@ -373,7 +373,7 @@ Type get_expr_type(Expr *e, Expr *parent,
 }
 
 void validate_array_indices(Exprs *indices, char *id,
-                            int line_no, sym_table *table, char *scope_id, symbol *array_sym) {
+        xint line_no, sym_table *table, char *scope_id, symbol *array_sym) {
 
     int p_num = 1;
     Decl *d = (Decl *) array_sym->sym_value;
