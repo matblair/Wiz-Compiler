@@ -746,6 +746,13 @@ gen_oz_expr_binop_bool(OzProgram *p, int r1, int r2, int r3, Expr *expr) {
         case BINOP_AND:
             gen_triop(p, OP_AND, r1, r2, r3);
             break;
+        case BINOP_EQ:
+            gen_triop(p, OP_CMP_EQ_INT, r1, r2, r3);
+            break;
+
+        case BINOP_NTEQ:
+            gen_triop(p, OP_CMP_NE_INT, r1, r2, r3);
+            break;
 
         default:
             report_error_and_exit("invalid op for bool binop expr!");
