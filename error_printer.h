@@ -23,8 +23,7 @@ void print_missing_main_error();
     Symbol errors
 -----------------------------------------------------------------------*/
 void print_dupe_proc_errors(Proc *r, Params *p, int duplicate, int original);
-void print_dupe_symbol_errors(char *id, Type t1, Type t2, int duplicate,
-                              int original);
+void print_dupe_symbol_errors(char *id, Type t1, Type t2, int duplicate);
 /*-----------------------------------------------------------------------
     Undefined value errors
 -----------------------------------------------------------------------*/
@@ -56,3 +55,4 @@ void print_array_outofbounds_error(Exprs *indices, char *id, int line_no,
     Unused variables or statement errors
 -----------------------------------------------------------------------*/
 void print_unused_symbol_error(char *id, int line_no);
+

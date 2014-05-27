@@ -105,7 +105,7 @@ void print_dupe_proc_errors(Proc *r, Params *p, int duplicate, int original) {
 }
 
 void print_dupe_symbol_errors(char *id, Type t1, Type t2,
-                              int duplicate, int original) {
+                              int duplicate) {
     fprintf(stderr, BOLDWHITE "%d " BOLDRED "error: " BOLDWHITE
             "symbol " KYEL "%s" KNRM " has been redefined, originally "
             "defined here:\n", duplicate, id);

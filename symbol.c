@@ -224,7 +224,7 @@ generate_decls_symbols(Decls *decls, scope *sc, sym_table *prog) {
         if (!insert_symbol(prog, s, sc)) {
             symbol *orig = retrieve_symbol(get_symbol_id(s), sc->id, prog);
             print_dupe_symbol_errors(get_symbol_id(s), get_type(orig),
-                                     get_type(s), s->line_no, orig->line_no);
+                                     get_type(s), s->line_no);
             setInvalid();
 
         }
@@ -309,7 +309,7 @@ generate_params_symbols(Header *h, scope *sc, sym_table *prog) {
         if (!insert_symbol(prog, s, sc)) {
             symbol *orig = retrieve_symbol(get_symbol_id(s), sc->id, prog);
             print_dupe_symbol_errors(get_symbol_id(s), get_type(orig),
-                                     get_type(s), s->line_no, orig->line_no);
+                                     get_type(s), s->line_no);
             setInvalid();
         }
         //Contine along

@@ -49,7 +49,7 @@ BOOL check_float_equiv(Type t);
 Type get_binop_type(Type t1, Type t2, BinOp b, int line_no, Expr *e);
 Type get_unop_type(Type t, UnOp u, int line_no, Expr *e);
 BOOL validate_array_dims(Expr *e, char *scope_id,
-                         sym_table *table, int line_no);
+                         sym_table *table);
 void validate_array_indices(Exprs *indices, char *id,
             int line_no, sym_table *table, char *scope_id, symbol *array_sym);
 
@@ -340,7 +340,7 @@ Type get_expr_type(Expr *e, Expr *parent,
         case EXPR_ARRAY:
             //We need to check array dimensions, then check all expressions are
             //int equiv.
-            if (validate_array_dims(e, scope_id, table, line_no)) {
+            if (validate_array_dims(e, scope_id, table)) {
                 symbol *a = retrieve_symbol(e->id, scope_id, table);
                 validate_array_indices(e->indices, e->id,
                                        line_no, table, scope_id, a);
@@ -373,7 +373,7 @@ Type get_expr_type(Expr *e, Expr *parent,
 }
 
 void validate_array_indices(Exprs *indices, char *id,
-        xint line_no, sym_table *table, char *scope_id, symbol *array_sym) {
+        int line_no, sym_table *table, char *scope_id, symbol *array_sym) {
 
     int p_num = 1;
     Decl *d = (Decl *) array_sym->sym_value;
@@ -515,7 +515,7 @@ Type get_const_type(Expr *e) {
 }
 
 BOOL
-validate_array_dims(Expr *e, char *scope_id, sym_table *table, int line_no) {
+validate_array_dims(Expr *e, char *scope_id, sym_table *table) {
     symbol *asym = retrieve_symbol(e->id, scope_id, table);
     if (asym == NULL) {
         //Array has not been defined

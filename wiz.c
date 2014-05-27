@@ -49,6 +49,7 @@ main(int argc, char **argv) {
     pretty_print_only = FALSE;
     analyse_optimise_print = FALSE;
     optimise = FALSE;
+    to_file = FALSE;
 
     /* Process command line */
     if ((argc < 2) || (argc > 3)) {
