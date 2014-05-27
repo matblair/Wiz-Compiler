@@ -184,8 +184,3 @@ void  bbst_map(void *t, void (*map_func)(const void *node)) {
         bbst_map(tree->left, map_func);
     }
 }
-
-
-
-
-

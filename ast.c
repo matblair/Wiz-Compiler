@@ -27,6 +27,3 @@ const char  *typenames[]  = { TYPE_NAMES };
 */
 const int  binopprec[] = { BINOP_PRECEDENCE };
 const int  unopprec[] = { UNOP_PRECEDENCE };
-
-
-

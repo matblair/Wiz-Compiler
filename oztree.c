@@ -232,10 +232,11 @@ gen_oz_decls(OzProgram *p, Decls *decls, void *table) {
 void
 gen_oz_init_array(OzProgram *p, int slot, int reg, Bounds *bounds) {
     int size = bounds->first->upper - bounds->first->lower + 1;
+    int i;
 
     // deepest down, initialse all the frames
     if (bounds->rest == NULL) {
-        for (int i = 0; i < size; i++) {
+        for (i = 0; i < size; i++) {
             gen_binop(p, OP_STORE, slot + i, reg);
         }
     }
@@ -243,7 +244,7 @@ gen_oz_init_array(OzProgram *p, int slot, int reg, Bounds *bounds) {
     else {
         int offset = bounds->first->offset_size;
         int next_slot;
-        for (int i = 0; i < size; i++) {
+        for (i = 0; i < size; i++) {
             next_slot = slot + i * offset;
             gen_oz_init_array(p, next_slot, reg, bounds->rest);
         }
@@ -964,6 +965,7 @@ get_reg_usage(Expr *expr, void *table) {
 
         default:
             report_error_and_exit("unknown expr type!");
+            return 0; // never hit, but gcc complains otherwise
     }
 }
 
@@ -1151,4 +1153,3 @@ gen_unop(OzProgram *p, OpCode code, int arg1) {
     op->code = code;
     op->arg1 = (void *) p1;
 }
-

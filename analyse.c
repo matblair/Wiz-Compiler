@@ -373,7 +373,7 @@ Type get_expr_type(Expr *e, Expr *parent,
 }
 
 void validate_array_indices(Exprs *indices, char *id,
-        xint line_no, sym_table *table, char *scope_id, symbol *array_sym) {
+        int line_no, sym_table *table, char *scope_id, symbol *array_sym) {
 
     int p_num = 1;
     Decl *d = (Decl *) array_sym->sym_value;
@@ -560,8 +560,3 @@ int count_params(Params *l) {
 void setInvalid() {
     isValid = FALSE;
 }
-
-
-
-
-

@@ -855,4 +855,3 @@ Expr *generate_unop_node(UnOp op, Expr *e1, int lineno) {
     node->inferred_type = -1;
     return node;
 }
-
