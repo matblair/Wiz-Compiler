@@ -444,4 +444,3 @@ get_type(symbol *sym) {
         return d->type;
     }
 }
-

@@ -33,6 +33,7 @@ int next_label = FIRST_AVAILABLE_LABEL;
 
 /*-----------------------------------------------------------------------------
  * Function prototypes for internal functions
+ * Explanations are provided with the actual implementation of each
  *---------------------------------------------------------------------------*/
 
 void gen_oz_procs(OzProgram *p, Procs *procs, void *tables);
@@ -108,6 +109,7 @@ gen_oz_program(Program *p, void *tables) {
  * Convert high level Wiz stuff into Oz structures
  *---------------------------------------------------------------------------*/
 
+// Recursively generate Oz code from a Wiz Procs struct
 void
 gen_oz_procs(OzProgram *p, Procs *procs, void *tables) {
     if (procs == NULL) {
@@ -126,6 +128,8 @@ gen_oz_procs(OzProgram *p, Procs *procs, void *tables) {
     gen_oz_procs(p, procs->rest, tables);
 }
 
+// Generate the prologue component of a Proc
+// Includes pushing stack, and creating Wiz Params and Decls
 void
 gen_oz_prologue(OzProgram *p, Params *params, Decls *decls, void *table) {
     gen_comment(p, SECTION_PROLOGUE);
@@ -134,6 +138,7 @@ gen_oz_prologue(OzProgram *p, Params *params, Decls *decls, void *table) {
     gen_oz_decls(p, decls, table);
 }
 
+// Generate the epilogue to for a Proc (pop stack and return)
 void
 gen_oz_epilogue(OzProgram *p, void *table) {
     gen_comment(p, SECTION_EPILOGUE);
@@ -141,6 +146,7 @@ gen_oz_epilogue(OzProgram *p, void *table) {
     gen_return(p);
 }
 
+// Generate Oz code from Wiz Params
 void
 gen_oz_params(OzProgram *p, Params *params, void *table) {
     Param *param;
@@ -157,6 +163,7 @@ gen_oz_params(OzProgram *p, Params *params, void *table) {
     }
 }
 
+// Generate Oz code from Wiz Decls
 void
 gen_oz_decls(OzProgram *p, Decls *decls, void *table) {
     Decls *ds;
@@ -221,13 +228,15 @@ gen_oz_decls(OzProgram *p, Decls *decls, void *table) {
     }
 }
 
+// Generate Oz code to initialise all the values in an array
 void
 gen_oz_init_array(OzProgram *p, int slot, int reg, Bounds *bounds) {
     int size = bounds->first->upper - bounds->first->lower + 1;
-    int i=0;
+    int i;
+
     // deepest down, initialse all the frames
     if (bounds->rest == NULL) {
-        for (i=0; i < size; i++) {
+        for (i = 0; i < size; i++) {
             gen_binop(p, OP_STORE, slot + i, reg);
         }
     }
@@ -272,6 +281,7 @@ void gen_oz_div_by_zero(OzProgram *p) {
  * Convert Wiz statements into Oz
  *---------------------------------------------------------------------------*/
 
+// Generate Oz code from Wiz Stmts
 void
 gen_oz_stmts(OzProgram *p, Stmts *stmts, void *tables, void *table) {
     if (stmts == NULL) {
@@ -280,6 +290,7 @@ gen_oz_stmts(OzProgram *p, Stmts *stmts, void *tables, void *table) {
 
     Stmt *stmt = stmts->first;
 
+    // call the appropriate code generator
     switch (stmt->kind) {
         case STMT_WRITE:
             gen_oz_write(p, stmt->info.write, table);
@@ -312,11 +323,13 @@ gen_oz_stmts(OzProgram *p, Stmts *stmts, void *tables, void *table) {
     gen_oz_stmts(p, stmts->rest, tables, table);
 }
 
+// Generate Oz code from Wiz Write
 void
 gen_oz_write(OzProgram *p, Expr *write, void *table) {
     gen_comment(p, SECTION_WRITE);
 
     gen_oz_expr(p, 0, write, table);
+
     switch (write->inferred_type) {
         case BOOL_TYPE:
             gen_call_builtin(p, BUILTIN_PRINT_BOOL);
@@ -339,12 +352,14 @@ gen_oz_write(OzProgram *p, Expr *write, void *table) {
     }
 }
 
+// Generate Oz code from Wiz Read
 void
 gen_oz_read(OzProgram *p, Expr *read, void *table) {
     gen_comment(p, SECTION_READ);
 
     symbol *sym = retrieve_symbol_in_scope(read->id, table);
 
+    // Read in the appropriate value type
     switch (sym->type) {
         case SYM_BOOL:
             gen_call_builtin(p, BUILTIN_READ_BOOL);
@@ -362,24 +377,29 @@ gen_oz_read(OzProgram *p, Expr *read, void *table) {
             report_error_and_exit("invalid type to read!");
     }
 
+    // Store the value in the appropirate place
     if (read->kind == EXPR_ARRAY) {
         //if array access is entirely static, store directly
         Bounds *bounds = sym->bounds;
         ArrayAccess *array_access = get_array_access(read, bounds);
         if (array_access->dynamic_bounds == NULL) {
             gen_binop(p, OP_STORE, sym->slot + array_access->static_offset, 0);
+
         } else {
             gen_oz_expr_array_addr(p, 1, read, table);
             gen_binop(p, OP_STORE_INDIRECT, 1, 0);
         }
+
     } else if (sym->kind == SYM_PARAM_REF) {
         gen_binop(p, OP_LOAD, 1, sym->slot);
         gen_binop(p, OP_STORE_INDIRECT, 1, 0);
+
     } else {
         gen_binop(p, OP_STORE, sym->slot, 0);
     }
 }
 
+// Generate Oz code from Wiz Assign
 void
 gen_oz_assign(OzProgram *p, Assign *assign, void *table) {
     gen_comment(p, SECTION_ASSIGN);
@@ -406,14 +426,17 @@ gen_oz_assign(OzProgram *p, Assign *assign, void *table) {
             gen_oz_expr_array_addr(p, 1, assign->asg_ident, table);
             gen_binop(p, OP_STORE_INDIRECT, 1, 0);
         }
+
     } else if (sym->kind == SYM_PARAM_REF) {
         gen_binop(p, OP_LOAD, 1, sym->slot);
         gen_binop(p, OP_STORE_INDIRECT, 1, 0);
+
     } else {
         gen_binop(p, OP_STORE, sym->slot, 0);
     }
 }
 
+// Generate Oz code from Wiz Call
 void
 gen_oz_call(OzProgram *p, Function *call, void *tables, void *table) {
     gen_comment(p, SECTION_CALL);
@@ -442,6 +465,7 @@ gen_oz_call(OzProgram *p, Function *call, void *tables, void *table) {
             } else {
                 gen_binop(p, OP_LOAD_ADDRESS, reg, arg_sym->slot);
             }
+
         } else {
             gen_oz_expr(p, reg, arg, table);
             // are we passing an int value to a float param?
@@ -460,6 +484,7 @@ gen_oz_call(OzProgram *p, Function *call, void *tables, void *table) {
     gen_call(p, call->id);
 }
 
+// Generate Oz code from Wiz Cond
 void
 gen_oz_cond(OzProgram *p, Cond *cond, void *tables, void *table) {
     gen_comment(p, SECTION_IF);
@@ -473,20 +498,24 @@ gen_oz_cond(OzProgram *p, Cond *cond, void *tables, void *table) {
     }
     after_label = next_label++;
 
+    // Evaluate the conditional
     gen_oz_expr(p, 0, cond->cond, table);
     gen_binop(p, OP_BRANCH_ON_FALSE, 0, else_branch ? else_label : after_label);
 
     gen_oz_stmts(p, cond->then_branch, tables, table); // then body
 
+    // Code for else branch, if required
     if (else_branch) {
         gen_unop(p, OP_BRANCH_UNCOND, after_label);
         gen_label(p, else_label);
         gen_oz_stmts(p, cond->else_branch, tables, table);
     }
 
-    gen_label(p, after_label);                  // exit jump point
+    // exit jump point
+    gen_label(p, after_label);
 }
 
+// Generate Oz code from Wiz While
 void
 gen_oz_while(OzProgram *p, While *loop, void *tables, void *table) {
     gen_comment(p, SECTION_WHILE);
@@ -507,6 +536,7 @@ gen_oz_while(OzProgram *p, While *loop, void *tables, void *table) {
  * Convert Wiz expressions into Oz structures
  *---------------------------------------------------------------------------*/
 
+// Generate Oz code from Wiz Expr
 void
 gen_oz_expr(OzProgram *p, int reg, Expr *expr, void *table) {
     switch (expr->kind) {
@@ -535,6 +565,7 @@ gen_oz_expr(OzProgram *p, int reg, Expr *expr, void *table) {
     }
 }
 
+// Generate Oz code from Wiz EXPR_ID Expr
 void
 gen_oz_expr_id(OzProgram *p, int reg, char *id, void *table) {
     symbol *sym = retrieve_symbol_in_scope(id, table);
@@ -550,6 +581,7 @@ gen_oz_expr_id(OzProgram *p, int reg, char *id, void *table) {
     }
 }
 
+// Generate Oz code from Wiz EXPR_CONST Expr
 void
 gen_oz_expr_const(OzProgram *p, int reg, Constant *constant) {
     Value *val = &(constant->val);
@@ -583,8 +615,10 @@ gen_oz_expr_array_val(OzProgram *p, int reg, Expr *a, void *table) {
     symbol *sym = retrieve_symbol_in_scope(a->id, table);
     Bounds *bounds = sym->bounds;
     ArrayAccess *array_access = get_array_access(a, bounds);
+
     if (array_access->dynamic_bounds == NULL) {
         gen_binop(p, OP_LOAD, reg, sym->slot + array_access->static_offset);
+
     } else {
         gen_oz_expr_array_addr(p, reg, a, table);
         gen_binop(p, OP_LOAD_INDIRECT, reg, reg);
@@ -647,6 +681,7 @@ gen_oz_expr_array_addr(OzProgram *p, int reg, Expr *a, void *table) {
  * Convert Wiz binary/unary operations into Oz structures
  *---------------------------------------------------------------------------*/
 
+// Generate Oz code from Wiz EXPR_BINOP Expr
 void
 gen_oz_expr_binop(OzProgram *p, int reg, Expr *expr, void *table) {
     int e1type = expr->e1->inferred_type;
@@ -700,6 +735,7 @@ gen_oz_expr_binop(OzProgram *p, int reg, Expr *expr, void *table) {
     }
 }
 
+// Generate Oz code from Wiz booean binop Expr
 void
 gen_oz_expr_binop_bool(OzProgram *p, int r1, int r2, int r3, Expr *expr) {
     switch (expr->binop) {
@@ -716,6 +752,7 @@ gen_oz_expr_binop_bool(OzProgram *p, int r1, int r2, int r3, Expr *expr) {
     }
 }
 
+// Generate Oz code from Wiz integer binop Expr
 void
 gen_oz_expr_binop_int(OzProgram *p, int r1, int r2, int r3, Expr *expr) {
     switch (expr->binop) {
@@ -764,6 +801,7 @@ gen_oz_expr_binop_int(OzProgram *p, int r1, int r2, int r3, Expr *expr) {
     }
 }
 
+// Generate Oz code from Wiz float binop Expr
 void
 gen_oz_expr_binop_float(OzProgram *p, int r1, int r2, int r3, Expr *expr) {
     switch (expr->binop) {
@@ -812,6 +850,7 @@ gen_oz_expr_binop_float(OzProgram *p, int r1, int r2, int r3, Expr *expr) {
     }
 }
 
+// Generate Oz code from Wiz EXPR_UNOP Expr
 void
 gen_oz_expr_unop(OzProgram *p, int reg, Expr *expr, void *table) {
     Type t = expr->inferred_type;
@@ -923,9 +962,8 @@ get_reg_usage(Expr *expr, void *table) {
 
         default:
             report_error_and_exit("unknown expr type!");
+            return 0; // never hit, but gcc complains otherwise
     }
-    // Error return here to stop it complaining.
-    return -1;
 }
 
 /*-----------------------------------------------------------------------------
@@ -951,6 +989,7 @@ new_line(OzProgram *p) {
     return new_line;
 }
 
+// Add a new (blank) OzOp to the end of the program, and return it
 OzOp *
 new_op(OzProgram *p) {
     OzOp *new_op = checked_malloc(sizeof(OzOp));
@@ -967,7 +1006,9 @@ new_op(OzProgram *p) {
 
 
 /*-----------------------------------------------------------------------------
- * Create Oz command for a particular operation
+ * Create Oz command for a particular operation, appending it to the end of the
+ * program
+ * All are self explanatory (gen_comment generates an OzComment, etc.)
  *---------------------------------------------------------------------------*/
 
 void

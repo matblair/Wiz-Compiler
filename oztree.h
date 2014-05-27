@@ -71,7 +71,7 @@ typedef enum {
 extern const char *builtinnames[];
 
 
-
+// The different types of lines we can have in Oz
 typedef enum {
     OZ_BUILTIN, OZ_PROC, OZ_LABEL, OZ_OP, OZ_COMMENT
 } OzKind;

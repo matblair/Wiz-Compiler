@@ -560,8 +560,3 @@ int count_params(Params *l) {
 void setInvalid() {
     isValid = FALSE;
 }
-
-
-
-
-

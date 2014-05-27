@@ -31,4 +31,3 @@ extern  FILE        *yyin;
 extern  int         fileno(FILE *);
 
 #endif  /* MISSING_H */
-
