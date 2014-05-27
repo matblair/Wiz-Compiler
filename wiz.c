@@ -70,11 +70,6 @@ main(int argc, char **argv) {
         in_filename = argv[2];
     }
 
-    if (argc == 3 && streq(argv[1], "-o")) {
-        optimise = TRUE;
-        in_filename = argv[2];
-    }
-
     if (argc == 3 && streq(argv[1], "-f")) {
         to_file = TRUE;
         in_filename = argv[2];
@@ -109,10 +104,8 @@ main(int argc, char **argv) {
     }
 
     //Standard compilation
-    if (optimise) {
-        reduce_ast(parsed_program);
-    } else if (to_file) {
-        reduce_ast(parsed_program);
+    reduce_ast(parsed_program);
+    if (to_file) {
         int in_filename_len = strlen(in_filename);
         char *outfile = checked_malloc((strlen(in_filename) + 4) * sizeof(char));
         //suffix points to the '.' in filename, assuming it ends in ".wiz"
@@ -149,18 +142,19 @@ main(int argc, char **argv) {
 
 static void
 usage(void) {
-    printf("usage: wiz [-p|-o|-c|-f] iz_source_file\n"
+    printf("usage: wiz [-p|-c|-f] iz_source_file\n"
            "\t -p : Parses program and pretty prints internal\n"
            "\t      representation to stdout.\n"
-           "\t -o : Compile with optimisations enabled.\n"
-           "\t      Output is written to stdout.\n"
            "\t -c : Optimise and reduce expressions, printing the before\n"
            "\t      and after results, along with any errors.\n"
            "\t      Output is written to stdout.\n"
            "\t -f : Compile with optimisations enabled.\n"
            "\t      Output is written to file WIZ_SOURCE_PREFIX.oz (where\n"
            "\t      WIZ_SOURCE_PREFIX is the prefix of wiz_source_file\n"
-           "\t      - i.e. with '.wiz' suffix removed, if present).\n");
+           "\t      - i.e. with '.wiz' suffix removed, if present).\n"
+           "\t NO_FLAGS :\n" 
+           "\t      Compile with optimisations enabled.\n"
+           "\t      Output is written to stdout.\n");
 
 }
 

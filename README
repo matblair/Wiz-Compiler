@@ -30,8 +30,6 @@ instructions for our wiz compiler.
 We have added several options to the compiler to accomodate for the various
 new functions we have added. These additonal functions are as follows.
 
-    -o : Compile with optimisations enabled.
-         Output is written to stdout.
     -c : Optimise and reduce expressions, printing the before
          and after results, along with any errors.
          Output is written to stdout.
@@ -39,12 +37,12 @@ new functions we have added. These additonal functions are as follows.
          Output is written to file WIZ_SOURCE_PREFIX.oz (where
          WIZ_SOURCE_PREFIX is the prefix of wiz_source_file
          - i.e. with '.wiz' suffix removed, if present).
+    NO_ARGS : 
+         Compile with optimisations enabled.
+         Output is written to stdout.
 
 These options are also available through the usage prompt printed when a user
-enters "wiz" or "./wiz" without appropriate input options. We have separated
-the optimisation options from compilation to allow users to choose to forgo 
-these optimisations if they think best (i.e. if they're trying to be 'clever').
-
+enters "wiz" or "./wiz" without appropriate input options. 
 /*-----------------------------------------------------------------------
 	Optimisation Strategies
 -----------------------------------------------------------------------*/
