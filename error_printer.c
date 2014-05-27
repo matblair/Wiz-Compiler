@@ -36,6 +36,8 @@
 /*----------------------------------------------------------------------
     Function implementations.
 -----------------------------------------------------------------------*/
+// All of these functions simply print to stderr with formatting as appropriate
+// because of this we will not be commenting all of these as it is unneccesary.
 
 void print_bold(const char *string) {
     fprintf(stderr, BOLDWHITE "%s\n" KNRM, string);

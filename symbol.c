@@ -6,7 +6,7 @@
     of programs from the wiz languge to Oz machine code.
 
     This table makes use of our balanced binary tree implementation and contains
-    any information required for quick analysis and optimisation as well as 
+    any information required for quick analysis and optimisation as well as
     code generation.
 
     It is laid out as a table of tables, the first level representing scope
@@ -44,9 +44,10 @@ SymType sym_type_from_ast_type(Type t);
 
 
 /*----------------------------------------------------------------------
-FUNCTIONS!!!! cOMMENT THIS LATER
+    Function implementations
 -----------------------------------------------------------------------*/
-
+// Simply allocates spaced for a symbol table, initialises the bbst
+// and returns.
 sym_table *
 initialize_sym_table() {
     //We need to create a symbol table for scope
@@ -59,6 +60,8 @@ initialize_sym_table() {
     return prog_sym;
 }
 
+// Comparison function for use with the bbst, takes a key (our id) and 
+// a scope and checks if they're < > or =
 int
 comp_scope(const void *key, const void *b) {
     if (b == NULL) {
@@ -73,7 +76,8 @@ comp_scope(const void *key, const void *b) {
 }
 
 
-
+// Comparison function for use with the bbst, takes a key (our id) and 
+// a symbol and checks if they're < > or =
 int
 comp_symbol(const void *key, const void *b) {
     if (b == NULL) {
@@ -87,6 +91,10 @@ comp_symbol(const void *key, const void *b) {
     return (strcmp(id_a, id_b));
 }
 
+// Function to create a scope, takes a table to insert the scope into, as well 
+// as the parameters, function id and line number. Creates a scope object, 
+// initialises all the correct values and then inserts it into the bbst for the
+// root table.
 scope *
 create_scope(void *table, char *scope_id, void *p, int line_no) {
     //First check if the scope exists already
@@ -106,6 +114,8 @@ create_scope(void *table, char *scope_id, void *p, int line_no) {
     return new_scope;
 }
 
+// Inserts a symbol into the given table, returning true or false for success
+// or failure. Will only insert a symbol if unique (i.e. not yet inserted)
 BOOL
 insert_symbol(sym_table *prog, symbol *sym, scope *s) {
     //First check if the symbol exists, otherwise insert.
@@ -119,6 +129,8 @@ insert_symbol(sym_table *prog, symbol *sym, scope *s) {
     }
 }
 
+// Finds the id of a symbol depending on the type of the symbol itself.
+// Quite straightforward implementation
 char *
 get_symbol_id(symbol *a) {
     if (a->kind == SYM_LOCAL) {
@@ -132,6 +144,10 @@ get_symbol_id(symbol *a) {
     }
 }
 
+// A wrapper function that will create the scope for a given procedure, then
+// once created will call generate params and generate decls for the symbols
+// in the parameters and declarations. Handles any errors that may arrise 
+// during this creation
 void
 generate_scope(Proc *proc, sym_table *prog) {
     //Create the scope
@@ -152,6 +168,9 @@ generate_scope(Proc *proc, sym_table *prog) {
     }
 }
 
+// Function to wrap about the generate scope function. Will simply traverse
+// the linked list of processes in a program and calls generate_scope for that
+// process.
 sym_table *
 gen_sym_table(Program *prog) {
     //We walk through each proc, generating a symbol table for it
@@ -170,6 +189,11 @@ gen_sym_table(Program *prog) {
     return table;
 }
 
+// Traverses the linked list for a set of declarations and for each declaration
+// creates a new symbol, initialises all of the correct values and handles 
+// geneartion of bounds if it is an array. Then tries to insert the symbol
+// into a given scope. If it fails at any point it will print the appropriate
+// warning message using the error printer.
 void
 generate_decls_symbols(Decls *decls, scope *sc, sym_table *prog) {
     while (decls != NULL) {
@@ -209,7 +233,8 @@ generate_decls_symbols(Decls *decls, scope *sc, sym_table *prog) {
     }
 }
 
-// add bounds to symbol (for arrays)
+// Function to add bounds to symbol (for arrays), traverses the 
+// intervals and generates a bounds for each of them.
 void
 add_bounds_to_symbol(symbol *sym, Intervals *intvls) {
     if (intvls == NULL) {
@@ -249,13 +274,16 @@ add_bounds_to_symbol(symbol *sym, Intervals *intvls) {
     sym->bounds = bounds;
 }
 
-// consume more of the slots, for arrays
+// Function to keep track of next_slot when generating arrays
 void
 add_frames_to_stack(scope *t, int size) {
     t->next_slot += size;
 }
 
-
+// Traverses the linked list parameters and for each parameter
+// creates a new symbol, initialises all of the correct values.
+// It then tries to insert the symbol into a given scope. If it fails at any 
+// point it will print the appropriate warning message using the error printer.
 void
 generate_params_symbols(Header *h, scope *sc, sym_table *prog) {
     //We go through the params and add a symbol for each one.
@@ -289,7 +317,8 @@ generate_params_symbols(Header *h, scope *sc, sym_table *prog) {
     }
 }
 
-
+// Uses the bbst functions to find a symbol from a given scope_id. Will return
+// Null if either the scope or the symbol does not exist.
 symbol *
 retrieve_symbol(char *id, char *scope_id, sym_table *prog) {
     //First find the scope;
@@ -302,6 +331,8 @@ retrieve_symbol(char *id, char *scope_id, sym_table *prog) {
     }
 }
 
+// Retrieves a symbol from a given scope without having to find it first, will
+// return NULL if it does not exist.
 symbol *
 retrieve_symbol_in_scope(char *id, scope *s) {
     //First check if the scope exists, otherwise insert.
@@ -313,19 +344,24 @@ retrieve_symbol_in_scope(char *id, scope *s) {
     }
 }
 
+// Finds a scope with a given ID from a program scopes table, returns NULL
+// if it cannot be found.
 scope *
 find_scope(char *scope_id, sym_table *prog) {
     // For information hiding
     return (scope *) bbst_find_node(scope_id, prog->table, comp_scope);
 }
 
-
+// A function to return a string for a scope when printing. To be used with 
+// the bbst print funciton.
 char *
 print_scope(const void *node) {
     scope *s = (scope *) node;
     return s->id;
 }
 
+// A function for debug to use map and print from bbst to print over a 
+// scope and print appropriate information for it.
 void
 map_print_symbol(const void *node) {
     //Each node is a scope
@@ -337,6 +373,8 @@ map_print_symbol(const void *node) {
     fprintf(stderr, "\n\n");
 }
 
+// A simple function to generate a string to print for a given symbol
+// to be used with the bbst function printer.
 char *
 print_symbol(const void *node) {
     symbol *s = (symbol *) node;
@@ -344,6 +382,8 @@ print_symbol(const void *node) {
     return get_symbol_id(s);
 }
 
+// A wrapper function that prints all of a symbol table using 
+// the previously mentioned functions. For debug purposes.
 void
 dump_symbol_table(sym_table *prog) {
     //First print the scope tree
@@ -354,25 +394,24 @@ dump_symbol_table(sym_table *prog) {
     bbst_map(prog->table, map_print_symbol);
 }
 
-void
-free_tree(sym_table *prog) {
-    // Also avoid this for now.
-}
-
+// A function that will map a function over a symbol table. Used to preserve
+// abstraction around the bbst layer if we were to change the implementation
+// of this later.
 void
 map_over_symbols(void *sym_table, void (*map_func)(const void *node)) {
     //Wraps around bbst to preserve abstraction layer
     bbst_map(sym_table, map_func);
 }
 
-// Get the size of a symtable
+// Get the size of a symtable in terms of stack slots.
 int
 slots_needed_for_table(void *table) {
     scope *s = (scope *) table;
     return s->next_slot;
 }
 
-
+// Takes a type and converts from the ast type to a symbol 
+// type to make life easier for code generation. 
 SymType
 sym_type_from_ast_type(Type t) {
     switch (t) {
@@ -391,7 +430,8 @@ sym_type_from_ast_type(Type t) {
     }
 }
 
-
+// Function to return the ast type of a given symbol. Will check the 
+// kind of symbol and then find the type appropriately.
 Type
 get_type(symbol *sym) {
     // Find the second type

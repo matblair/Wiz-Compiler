@@ -19,7 +19,10 @@ clean:
 	/bin/rm $(OBJ) piz.c piz.h piz.output liz.c
 
 submit:
-	submit 90045 1b wiz.h ast.h pretty.h std.h missing.h helper.h\
-	 	Makefile ast.c liz.l piz.y pretty.c wiz.c helper.c README
+	submit 90045 3b wiz.h ast.h pretty.h std.h missing.h helper.h\
+	 	Makefile ast.c liz.l piz.y pretty.c wiz.c helper.c README\
+	 	array_access.h array_access.c analyse.c analyse.h bbst.c bbst.h\
+	 	codegen.c codegen.h error_printer.c error_printer.h oztree.c\
+	 	oztree.h symbol.c symbol.h wizoptimiser.c wizoptimiser.h
 
 $(OBJ):	$(HDR)
