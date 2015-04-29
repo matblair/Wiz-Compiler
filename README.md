@@ -47,13 +47,13 @@ of reductions of expressions based on algebraic rules and constant folding.
 This is an optimization that takes place on the ast.
 For example, it is able to perform reductions such as
 
-`1 + 3 => 4`                    	     (constant folding)
+- `1 + 3 => 4`                    	     (constant folding)
 
-`(1 + (x + (y + 3))) => (4 + (x + y))`       (taking advantage of commutitivity)
+- `(1 + (x + (y + 3))) => (4 + (x + y))`       (taking advantage of commutitivity)
 
-`-a + b - c + d - e => b + d - (a + c + e)`  (factorizing negation)
-`---a => -a  `                    (removal of double negative)
-`not (not ((not a) and (not b))) and not (not (not c)) and not false  => not (a or b or c)`  (reduction of boolean expressions)
+- `-a + b - c + d - e => b + d - (a + c + e)`  (factorizing negation)
+- `---a => -a  `                    (removal of double negative)
+- `not (not ((not a) and (not b))) and not (not (not c)) and not false  => not (a or b or c)`  (reduction of boolean expressions)
 etc.
 
 
